@@ -147,7 +147,7 @@ def test_install_delivers_and_binds_only_authenticated_herdr(monkeypatch, case):
         monkeypatch.setattr(turn, '_schedule', lambda coro, *a: asyncio.run_coroutine_threadsafe(coro, ctx._loop_for_step))
         task = asyncio.create_task(asyncio.to_thread(_await_gateway_decision,
             ctx.session_key, turn._approval_notify_sync, {'command': 'harmless-test', 'description': 'test'}))
-        for _ in range(100):
+        for _ in range(1000):  # a cold first turn (fresh install) imports and compiles a lot
             if sent and m.BRIDGE.bindings: break
             await asyncio.sleep(.01)
         assert sent and m.BRIDGE.bindings

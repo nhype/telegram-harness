@@ -49,7 +49,13 @@ async def test_real_gateway_herdr_silence(installed,monkeypatch,tmp_path,token):
 
 @pytest.mark.asyncio
 async def test_human_warning_preserved(installed,monkeypatch,tmp_path):
-    await base.test_human_turn_gets_a_visible_fallback_for_a_silence_marker(monkeypatch,tmp_path)
+    helper = base.test_human_turn_gets_a_visible_fallback_for_a_silence_marker
+    import inspect
+    if 'reply_expected' in inspect.signature(helper).parameters:  # Hermes 0.21.5+
+        for reply_expected in (None, True):
+            await helper(monkeypatch, tmp_path, reply_expected)
+    else:
+        await helper(monkeypatch, tmp_path)
 
 @pytest.mark.asyncio
 async def test_real_notification_preserved(installed,monkeypatch,tmp_path):
