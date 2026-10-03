@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# Test stub: records argv.
+# Test stub: records argv; `integration install claude` marks the integration current.
 echo "herdr $*" >> "${STUB_LOG:?}"
+marker="${FAKE_HOME:?}/.herdr-claude-integration"
+case "${1:-} ${2:-} ${3:-}" in
+  "integration install claude") touch "$marker" ;;
+  "integration status "*)
+    if [[ -f "$marker" ]]; then echo "claude: current (v7) (~/.claude/hooks/herdr-agent-state.sh)"
+    else echo "claude: not installed (~/.claude/hooks/herdr-agent-state.sh)"; fi ;;
+esac
 [[ "${1:-}" == "--version" ]] && echo "herdr (stub)"
 exit 0

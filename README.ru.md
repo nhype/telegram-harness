@@ -57,11 +57,15 @@ hermes -p <профиль> model   # выбрать модель, на кото�
 bin/harness doctor <профиль>
 ```
 
-и отправить боту `/start`. Установка без вопросов:
+и отправить боту `/start`. Не перемещайте и не удаляйте клон: профиль ссылается на его скрипты и
+плагины. Установка без вопросов (токен вводится так, что не попадает в историю shell):
 
 ```bash
-TELEGRAM_BOT_TOKEN=... ./install.sh --yes --project Acme --repo /srv/acme --owner-id 123456789
+read -rs TELEGRAM_BOT_TOKEN && export TELEGRAM_BOT_TOKEN
+./install.sh --yes --project Acme --repo /srv/acme --owner-id 123456789
 ```
+
+Для каждого проекта нужен свой бот: два профиля Hermes не могут использовать один токен.
 
 Все параметры — в `./install.sh --help`. С `--dry-run` установщик только показывает план, ничего не
 меняя.
@@ -107,7 +111,8 @@ hermes profile delete <профиль>            # по желанию: сам 
 
 Сам harness — это bridge, реестр задач, route-скрипт, три плагина Hermes, два скилла и установщик.
 Плагины подменяют несколько внутренних функций gateway Hermes, поэтому на заметно более новой версии
-Hermes здесь может понадобиться обновление. Это покажет `bin/harness doctor`.
+Hermes здесь может понадобиться обновление. После `hermes update` прогоните тесты плагинов
+интерпретатором Hermes: `~/.hermes/hermes-agent/venv/bin/python -m pytest harness/plugins`.
 
 ## Документация (на английском)
 

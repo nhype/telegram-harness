@@ -351,6 +351,19 @@ def test_reply_resolves_real_blocking_wait_preserving_source_key(bridge):
         thread.join(3)
 
 
+def test_own_route_chat_accepts_legacy_and_v2_ids():
+    # Hermes 0.21.5+ keys webhook sessions as webhook:v2:<b64 [profile, route, delivery]>.
+    sys.path.insert(0, str(ROOT.parents[1] / 'scripts'))
+    import webhook_ids
+    m = load()
+    legacy, v2 = webhook_ids.session_chat_ids('herdr-agent-events', 'd1', 'exampleapp')
+    assert m.own_route_chat(legacy) and m.own_route_chat(v2)
+    assert m.own_route_chat(webhook_ids.session_chat_ids('herdr-agent-events', 'd1', None)[1])
+    assert not m.own_route_chat(webhook_ids.session_chat_ids('herdr-agent-events', 'd1', 'other')[1])
+    assert not m.own_route_chat(webhook_ids.session_chat_ids('herdr-other', 'd1', 'exampleapp')[1])
+    assert not m.own_route_chat('111111111')
+
+
 def test_settings_come_from_profile_config():
     m = load()
     assert (m.PROFILE, m.ROUTE, m.CHAT, m.OWNER, m.PROMPT_TAG) == (

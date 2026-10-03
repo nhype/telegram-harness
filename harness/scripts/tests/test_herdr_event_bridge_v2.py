@@ -15,6 +15,7 @@ import pytest
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import herdr_event_bridge as bridge  # noqa: E402
+import webhook_ids  # noqa: E402
 
 CWD = "/srv/example-app"
 T0 = 1_790_000_000.0
@@ -64,6 +65,7 @@ class Harness:
         self.sent_at = []
         self.list_calls = 0
         self.auto_end = auto_end
+        self.chat_format = options.pop("chat_format", "legacy")
         self.delivery_seq = 0
         self.now = T0
         cfg = bridge.BridgeConfig(self.registry_path, self.state_path, self.db_path,
@@ -106,9 +108,10 @@ class Harness:
 
     # controller rows in state.db ----------------------------------------------
     def controller(self, delivery_id, *, started=None, ended=None):
+        legacy, v2 = webhook_ids.session_chat_ids(self.bridge.cfg.webhook, delivery_id, self.bridge.cfg.profile)
         conn = sqlite3.connect(self.db_path)
         conn.execute("INSERT OR REPLACE INTO sessions VALUES (?,?,?,?,?,?)",
-                     (f"s-{delivery_id}", "webhook", f"webhook:herdr-agent-events:{delivery_id}",
+                     (f"s-{delivery_id}", "webhook", v2 if self.chat_format == "v2" else legacy,
                       self.now if started is None else started, ended,
                       "webhook_complete" if ended else None))
         conn.commit()
@@ -290,6 +293,22 @@ def test_single_flight_drops_self_caused_events(tmp_path, capsys):
     assert h.pane()["deferred"] is None
     out = capsys.readouterr().out
     assert "deferred task=a" in out and "reason=self_caused" in out
+
+
+def test_controller_end_found_for_v2_session_chat_ids(tmp_path, capsys):
+    # Hermes 0.21.5+ keys webhook sessions as webhook:v2:<b64 [profile, route, delivery]>;
+    # missing that row held every workflow until the no-row fallback.
+    h = Harness(tmp_path, tasks=[no_continue()], profile="exampleapp", chat_format="v2")
+    h.status("w5:p1", "idle")
+    h.advance(21)
+    assert len(h.sent) == 1
+    h.controller("d1")
+    h.advance(5)
+    assert h.bridge.inflight("a") is not None
+    h.finish("d1")
+    h.advance(6)
+    assert h.bridge.inflight("a") is None
+    assert "how=db" in capsys.readouterr().out
 
 
 def test_single_flight_wakes_for_real_work_after_controller(tmp_path):
@@ -695,7 +714,7 @@ def test_legacy_transition_payload_also_meets_contract():
     ("Do you want to proceed?\n❯ 1. Yes", "menu_open", "numbered selector"),
     ("Enter to select · Esc to cancel", "menu_open", "Enter to select"),
     ("API Error: 400 Prompt is too long", "context_limit", "Prompt is too long"),
-    ("❯ Ревью PASS, деплой и пилот-10\n⏵⏵ bypass permissions on", "none", ""),
+    ("❯ Ревью PASS, деплой и проверка\n⏵⏵ bypass permissions on", "none", ""),
     ("", "none", ""),
 ])
 def test_hint_classification(text, kind, label):

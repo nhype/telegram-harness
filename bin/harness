@@ -4,18 +4,21 @@ set -euo pipefail
 # shellcheck source=lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
 export PATH="$HOME/.local/bin:$PATH"
+DRY_RUN=0
 
 usage() {
   cat <<'EOF'
-Usage: bin/harness <command> <profile> [--no-services]
+Usage: bin/harness <command> <profile> [--no-services] [--wait SECONDS]
 
-  doctor               check every piece of the installation (exit 1 if anything fails)
+  doctor               check every piece of the installation (exit 1 if anything fails);
+                       --wait retries the live checks (services that just started) for up to SECONDS
   status               services, tasks and the last bridge log lines
   uninstall-services   remove the bridge service and the webhook route (profile data is kept)
 EOF
 }
 
 FAILED=0
+WAIT=0
 ok() { printf 'OK    %s\n' "$1"; }
 bad() { printf 'FAIL  %s — %s\n' "$1" "$2"; FAILED=1; }
 skip() { printf 'SKIP  %s (%s)\n' "$1" "$2"; }
@@ -23,11 +26,29 @@ check() { # check NAME HINT CMD...
   local name="$1" hint="$2"; shift 2
   if "$@" >/dev/null 2>&1; then ok "$name"; else bad "$name" "$hint"; fi
 }
+check_live() { # like check, but retried for up to $WAIT seconds
+  local name="$1" hint="$2" deadline=$((SECONDS + WAIT)); shift 2
+  until "$@" >/dev/null 2>&1; do
+    if ((SECONDS >= deadline)); then bad "$name" "$hint"; return 0; fi
+    sleep 3
+  done
+  ok "$name"
+}
 
 # Pipelines end in `grep >/dev/null`, never `grep -q`: under pipefail an early-exiting grep
 # breaks the producer's pipe and the check fails although the text is there.
-route_registered() { hhost webhook list 2>/dev/null | grep "$(route_name "$1")" >/dev/null; }
-bridge_subscribed() { journal "$(bridge_unit "$1")" -n 300 -o cat --no-pager 2>/dev/null | grep "subscribed project=" >/dev/null; }
+route_registered() { hhost webhook list 2>/dev/null | grep -w -- "$(route_name "$1")" >/dev/null; }
+herdr_integration_current() { herdr integration status 2>/dev/null | grep '^claude: current' >/dev/null; }
+bridge_subscribed() { # logged once per connect: search the journal since the unit last started
+  local unit since
+  unit="$(bridge_unit "$1")"
+  since="$(sysctl show -p ActiveEnterTimestamp --value "$unit" 2>/dev/null || true)"
+  if [[ -n "$since" && "$since" != n/a ]]; then
+    journal "$unit" --since "$since" -o cat --no-pager 2>/dev/null | grep "subscribed project=" >/dev/null
+  else
+    journal "$unit" -o cat --no-pager 2>/dev/null | grep "subscribed project=" >/dev/null
+  fi
+}
 webhook_answers() { # a payload naming no registered task: the route script ignores it, no agent runs
   hhost webhook test "$(route_name "$1")" --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1 |
     grep "Response (200)" >/dev/null
@@ -50,14 +71,15 @@ doctor() {
   done
   check "skill harness-controller" "re-run ./install.sh --profile $profile" test -f "$home/skills/harness-controller/SKILL.md"
   check "webhook route $(route_name "$profile") (host gateway)" "re-run ./install.sh --profile $profile" route_registered "$profile"
+  check "herdr integration for Claude Code" "run: herdr integration install claude" herdr_integration_current
   if [[ "$no_services" == 1 ]]; then
     skip "services, herdr socket, live webhook" "--no-services"
   else
-    check "host gateway service" "$(sysctl_name) status $GATEWAY_UNIT" sysctl is-active --quiet "$GATEWAY_UNIT"
-    check "bridge service" "$(sysctl_name) status $(bridge_unit "$profile")" sysctl is-active --quiet "$(bridge_unit "$profile")"
-    check "herdr socket $(herdr_socket)" "start it: herdr server (or enable herdr-server.service)" test -S "$(herdr_socket)"
-    check "bridge subscribed to Herdr" "see: bin/harness status $profile" bridge_subscribed "$profile"
-    check "webhook answers" "is the gateway running and the model configured? (hermes -p $profile model)" webhook_answers "$profile"
+    check_live "host gateway service" "$(sysctl_name) status $GATEWAY_UNIT" sysctl is-active --quiet "$GATEWAY_UNIT"
+    check_live "bridge service" "$(sysctl_name) status $(bridge_unit "$profile")" sysctl is-active --quiet "$(bridge_unit "$profile")"
+    check_live "herdr socket $(herdr_socket)" "start it: herdr server (or enable herdr-server.service)" test -S "$(herdr_socket)"
+    check_live "bridge subscribed to Herdr" "see: bin/harness status $profile" bridge_subscribed "$profile"
+    check_live "webhook answers" "is the host gateway running? (see docs/troubleshooting.md)" webhook_answers "$profile"
   fi
   return "$FAILED"
 }
@@ -87,8 +109,15 @@ uninstall_services() {
 
 main() {
   local cmd="${1:-}" profile="${2:-}" no_services=0
-  [[ "${3:-}" == "--no-services" ]] && no_services=1
   if [[ -z "$cmd" || -z "$profile" || "$cmd" == -h || "$cmd" == --help ]]; then usage; exit 2; fi
+  shift 2
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --no-services) no_services=1; shift ;;
+      --wait) WAIT="${2:?--wait needs seconds}"; shift 2 ;;
+      *) usage; exit 2 ;;
+    esac
+  done
   case "$cmd" in
     doctor) doctor "$profile" "$no_services" ;;
     status) status "$profile" ;;

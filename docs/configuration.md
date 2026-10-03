@@ -33,7 +33,7 @@ On the profile (`hermes -p <profile> …`):
 On the host (default) profile:
 
 - `platforms.webhook.enabled: true`, listening on `127.0.0.1:<port>` (first free port from 8650 unless
-  one is configured already), and `WEBHOOK_SECRET` in its `.env`.
+  one is configured already). Each route carries its own HMAC secret in Hermes's subscriptions file.
 - The route `herdr-<profile>`, bound to your profile (`--route-profile`), delivering to your Telegram chat.
 
 ## Project notes

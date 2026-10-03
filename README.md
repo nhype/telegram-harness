@@ -53,11 +53,15 @@ hermes -p <profile> model   # pick the model Hermes runs on
 bin/harness doctor <profile>
 ```
 
-and send `/start` to your bot. Non-interactive install:
+and send `/start` to your bot. Keep the clone where it is: the profile links its scripts and plugins
+into it. Non-interactive install (the token is read without landing in your shell history):
 
 ```bash
-TELEGRAM_BOT_TOKEN=... ./install.sh --yes --project Acme --repo /srv/acme --owner-id 123456789
+read -rs TELEGRAM_BOT_TOKEN && export TELEGRAM_BOT_TOKEN
+./install.sh --yes --project Acme --repo /srv/acme --owner-id 123456789
 ```
+
+Use a bot token of its own for each project: two Hermes profiles cannot share one bot.
 
 Run `./install.sh --help` for every option (`--dry-run` prints the plan without changing anything).
 
@@ -101,7 +105,8 @@ hermes profile delete <profile>            # optional: the profile and its histo
 
 The harness itself is the bridge, the task registry, the route script, three Hermes plugins, two skills
 and the installer. The plugins patch a few Hermes gateway internals, so a much newer Hermes may need an
-update here; `bin/harness doctor` tells you.
+update here; after `hermes update`, run the plugin tests with Hermes's own interpreter
+(`~/.hermes/hermes-agent/venv/bin/python -m pytest harness/plugins`).
 
 ## Documentation
 

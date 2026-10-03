@@ -5,11 +5,12 @@ set -euo pipefail
 # shellcheck source=lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 export PATH="$HOME/.local/bin:$PATH"
+DRY_RUN=0  # only --dry-run turns it on, never an inherited variable
 
 PROJECT="" PROFILE="" OWNER="" PORT="" TOKEN_ENV="TELEGRAM_BOT_TOKEN"
 REPOS=()
-YES=0 SKIP_DEPS=0 NO_SERVICES=0 NO_AGENT_SETUP=0 SIBLING=0
-HOME_P="" HOST_HOME=""
+YES=0 SKIP_DEPS=0 NO_SERVICES=0 NO_AGENT_SETUP=0 SIBLING=0 OWNER_GIVEN=0
+HOME_P="" HOST_HOME="" BOT_TOKEN=""
 
 usage() {
   cat <<'EOF'
@@ -26,7 +27,8 @@ Usage: ./install.sh [options]
   --yes                 non-interactive: install missing tools, never prompt (missing values are errors)
   --skip-deps           do not install third-party tools
   --no-services         do not install systemd services (containers, CI)
-  --no-agent-setup      do not run `lean-ctx wrap claude` or add .claude/settings.json
+  --no-agent-setup      leave Claude Code's own config alone: no `herdr integration install claude`,
+                        no `lean-ctx wrap claude`, no .claude/settings.json
   --dry-run             print every action, change nothing
   -h, --help            this help
 
@@ -40,7 +42,7 @@ parse_args() {
       --project) PROJECT="${2:?--project needs a value}"; shift 2 ;;
       --repo) REPOS+=("${2:?--repo needs a value}"); shift 2 ;;
       --profile) PROFILE="${2:?--profile needs a value}"; shift 2 ;;
-      --owner-id) OWNER="${2:?--owner-id needs a value}"; shift 2 ;;
+      --owner-id) OWNER="${2:?--owner-id needs a value}"; OWNER_GIVEN=1; shift 2 ;;
       --bot-token-env) TOKEN_ENV="${2:?--bot-token-env needs a value}"; shift 2 ;;
       --webhook-port) PORT="${2:?--webhook-port needs a value}"; shift 2 ;;
       --sibling) SIBLING=1; shift ;;
@@ -58,7 +60,7 @@ parse_args() {
 ask() { # ask VAR "question"
   local __var="$1" __reply
   [[ "$YES" == 1 ]] && die "missing ${2%%:*} (pass it as a flag with --yes)"
-  read -rp "$2 " __reply
+  read -rp "$2 " __reply || die "no input for '${2%%:*}' (no terminal?): pass the values as flags"
   printf -v "$__var" '%s' "$__reply"
 }
 
@@ -93,11 +95,14 @@ ask_missing() {
     local repo; ask repo "Absolute path of the project repo:"; REPOS=("$repo")
   fi
   [[ -n "$OWNER" ]] || ask OWNER "Your numeric Telegram user id (ask @userinfobot):"
-  if [[ -z "${!TOKEN_ENV:-}" ]] && ! token_saved; then
+  BOT_TOKEN="${!TOKEN_ENV:-}"
+  if [[ -z "$BOT_TOKEN" ]] && ! token_saved; then
     [[ "$YES" == 1 ]] && die "set $TOKEN_ENV to the bot token from @BotFather"
-    local token; read -rsp "Telegram bot token from @BotFather (hidden): " token; echo
-    printf -v "$TOKEN_ENV" '%s' "$token"
+    read -rsp "Telegram bot token from @BotFather (hidden): " BOT_TOKEN || die "no input for the bot token"
+    echo
   fi
+  # Keep the token out of every child process (installers, hermes, openspec, ...).
+  export -n "${TOKEN_ENV?}" TELEGRAM_BOT_TOKEN 2>/dev/null || true
 }
 
 token_saved() {
@@ -109,9 +114,12 @@ token_saved() {
 validate() {
   [[ "$PROFILE" =~ ^[a-z0-9]+$ ]] || die "--profile must be lowercase letters and digits (got '$PROFILE')"
   [[ "$OWNER" =~ ^-?[0-9]{3,20}$ ]] || die "--owner-id must be your numeric Telegram user id (got '$OWNER')"
-  local repo
-  for repo in "${REPOS[@]}"; do
-    [[ "$repo" == /* ]] || die "--repo must be an absolute path (got '$repo')"
+  local i repo
+  for i in "${!REPOS[@]}"; do
+    repo="${REPOS[$i]/#\~/$HOME}"
+    while [[ "$repo" != / && "$repo" == */ ]]; do repo="${repo%/}"; done
+    [[ "$repo" == /* ]] || die "--repo must be an absolute path (got '${REPOS[$i]}')"
+    REPOS[i]="$repo"
   done
   [[ -z "$PORT" || "$PORT" =~ ^[0-9]{2,5}$ ]] || die "--webhook-port must be a number"
 }
@@ -140,7 +148,7 @@ ensure() { # ensure BIN "install command"
     return 0
   fi
   if [[ "$YES" != 1 && "$DRY_RUN" != 1 ]]; then
-    read -rp "Install $bin with: $cmd ? [Y/n] " answer
+    read -rp "Install $bin with: $cmd ? [Y/n] " answer || die "no input (no terminal?): use --yes"
     [[ "$answer" =~ ^[Nn] ]] && die "$bin is required"
   fi
   run bash -c "set -o pipefail; $cmd"  # a failed download must not look like a successful install
@@ -159,6 +167,12 @@ install_deps() {
 }
 
 helper() { run python3 "$HARNESS_ROOT/harness/tools/harness_setup.py" "$@"; }
+
+store_token() { # the token reaches only this one process, never argv or output
+  if [[ "$DRY_RUN" == 1 ]]; then printf '[dry-run] store the bot token in %s/.env\n' "$HOME_P"; return 0; fi
+  TELEGRAM_BOT_TOKEN="$BOT_TOKEN" python3 "$HARNESS_ROOT/harness/tools/harness_setup.py" \
+    env --home "$HOME_P" --force TELEGRAM_BOT_TOKEN
+}
 hcfg() { run hermes -p "$PROFILE" config set "$@"; }
 
 link_dir() { # link_dir SRC DST: DST becomes a symlink to SRC (a real dir is moved aside once)
@@ -185,12 +199,12 @@ setup_profile() {
   HOME_P="$(profile_home "$PROFILE")"
   [[ -n "$HOME_P" ]] || HOME_P="$HOME/.hermes/profiles/$PROFILE"  # dry run before creation
 
-  if [[ -n "${!TOKEN_ENV:-}" ]]; then
-    export TELEGRAM_BOT_TOKEN="${!TOKEN_ENV}"
-    helper env --home "$HOME_P" --force TELEGRAM_BOT_TOKEN
-  fi
+  [[ -z "$BOT_TOKEN" ]] || store_token
+  # The allowlist is replaced only when --owner-id is given now; an update run keeps your edits.
+  local force=()
+  [[ "$OWNER_GIVEN" == 1 ]] && force=(--force)
   export TELEGRAM_ALLOWED_USERS="$OWNER" TELEGRAM_HOME_CHANNEL="$OWNER"
-  helper env --home "$HOME_P" --force TELEGRAM_ALLOWED_USERS TELEGRAM_HOME_CHANNEL
+  helper env --home "$HOME_P" "${force[@]}" TELEGRAM_ALLOWED_USERS TELEGRAM_HOME_CHANNEL
 
   hcfg approvals.mode smart
   hcfg approvals.timeout 300
@@ -224,7 +238,7 @@ setup_host() {
   HOST_HOME="$(host_home)"
   [[ -n "$HOST_HOME" ]] || HOST_HOME="$HOME/.hermes"
   local configured_port
-  configured_port="$(host_config_get platforms.webhook.extra.port)"
+  configured_port="$(host_config_get platforms.webhook.extra.port | grep -Eo '^[0-9]+$' | tail -1 || true)"
   run hhost config set platforms.webhook.enabled true
   if [[ -z "$configured_port" ]]; then
     [[ -n "$PORT" ]] || PORT="$(free_port)"
@@ -233,11 +247,6 @@ setup_host() {
   elif [[ -n "$PORT" && "$PORT" != "$configured_port" ]]; then
     warn "the host webhook listener already uses port $configured_port; keeping it (ignoring --webhook-port $PORT)"
   fi
-  if ! grep -qs '^WEBHOOK_SECRET=.' "$HOST_HOME/.env"; then
-    WEBHOOK_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-    export WEBHOOK_SECRET
-    helper env --home "$HOST_HOME" WEBHOOK_SECRET
-  fi
 }
 
 setup_route() {
@@ -245,10 +254,11 @@ setup_route() {
   prompt="$(PROJECT="$PROJECT" python3 -c 'import os, sys
 print(open(sys.argv[1]).read().replace("{{PROJECT}}", os.environ["PROJECT"]), end="")' \
     "$HARNESS_ROOT/templates/webhook-prompt.txt")"
+  # The route's HMAC secret stays in Hermes's subscriptions file, not in the install output.
   run hhost webhook subscribe "$(route_name "$PROFILE")" --route-profile "$PROFILE" \
     --description "Herdr lifecycle controller for $PROJECT" --events test \
     --skills harness-controller --script herdr_workflow_context.py \
-    --deliver telegram --deliver-chat-id "$OWNER" --prompt "$prompt"
+    --deliver telegram --deliver-chat-id "$OWNER" --prompt "$prompt" | sed '/[Ss]ecret:/d'
 }
 
 render_unit() { # render_unit TEMPLATE OUT
@@ -269,6 +279,9 @@ render_unit() { # render_unit TEMPLATE OUT
 
 setup_services() {
   [[ "$NO_SERVICES" == 1 ]] && { log "skipping systemd services (--no-services)"; return 0; }
+  if ! have hermes || ! have herdr; then
+    die "the services need hermes and herdr on PATH (install them or drop --skip-deps)"
+  fi
   # One host gateway serves every profile: install it once, otherwise restart it so it picks up
   # this profile, its plugins and its bot token.
   if sysctl cat "$GATEWAY_UNIT" >/dev/null 2>&1; then
@@ -282,7 +295,7 @@ setup_services() {
   local units=("$(bridge_unit "$PROFILE")")
   render_unit "$HARNESS_ROOT/templates/systemd/harness-bridge.service.in" "$(unit_dir)/$(bridge_unit "$PROFILE")"
   if [[ ! -f "$(unit_dir)/herdr-server.service" ]]; then
-    if pgrep -f "herdr server" >/dev/null 2>&1; then
+    if pgrep -u "$(id -u)" -f "herdr server" >/dev/null 2>&1; then
       warn "a herdr server is already running outside systemd; it will not restart after a reboot"
     else
       render_unit "$HARNESS_ROOT/templates/systemd/herdr-server.service.in" "$(unit_dir)/herdr-server.service"
@@ -291,8 +304,12 @@ setup_services() {
   fi
   run sysctl daemon-reload
   run sysctl enable --now "${units[@]}"
-  if ! is_root && have loginctl && loginctl show-user "$USER" -p Linger 2>/dev/null | grep '=no' >/dev/null; then
-    warn "user services stop when you log out; run once: sudo loginctl enable-linger $USER"
+  # A re-run (e.g. after git pull) must put the bridge on the new code and config. Never restart
+  # the herdr server here: that would kill every running agent.
+  run sysctl try-restart "$(bridge_unit "$PROFILE")"
+  local user="${USER:-$(id -un)}"
+  if ! is_root && have loginctl && loginctl show-user "$user" -p Linger 2>/dev/null | grep '=no' >/dev/null; then
+    warn "user services stop when you log out; run once: sudo loginctl enable-linger $user"
   fi
 }
 
@@ -313,6 +330,15 @@ setup_repos() {
     fi
   done
   if [[ "$NO_AGENT_SETUP" != 1 ]]; then
+    # Claude Code reports its session id to Herdr only through this hook; without it a fresh
+    # session before Apply cannot be verified and every task stalls there.
+    if ! have herdr; then
+      warn "herdr is not installed; later run: herdr integration install claude"
+    elif herdr integration status 2>/dev/null | grep '^claude: current' >/dev/null; then
+      log "Herdr's Claude Code integration is current"
+    else
+      run herdr integration install claude
+    fi
     if have lean-ctx; then
       run lean-ctx wrap claude </dev/null || warn "lean-ctx wrap claude failed; run it yourself later"
     else
@@ -323,7 +349,8 @@ setup_repos() {
 
 finish() {
   if [[ "$DRY_RUN" == 1 ]]; then log "dry run finished: nothing was changed"; return 0; fi
-  local flags=()
+  # Services just started: give the listener and the bridge a minute.
+  local flags=(--wait "${HARNESS_DOCTOR_WAIT:-60}")
   [[ "$NO_SERVICES" == 1 ]] && flags=(--no-services)
   "$HARNESS_ROOT/bin/harness" doctor "$PROFILE" "${flags[@]}" || warn "doctor found problems (see FAIL lines above)"
   cat <<EOF

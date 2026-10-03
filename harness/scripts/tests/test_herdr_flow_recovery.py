@@ -204,10 +204,12 @@ def test_native_registry_recovery_and_webhook_toolset_resolution(tmp_path, pipel
     MCP tool; this test checks the native recovery path with the same outside-cwd
     registry shape, and checks the deployed profile's explicit toolsets.
     """
-    assert bridge.load_pipeline_config(pipeline) is not None, f'invalid {pipeline}'
-    home, path, registry, _, _, _ = prepare(tmp_path)
+    config = bridge.load_pipeline_config(pipeline)
+    assert config is not None, f'invalid {pipeline}'
     python = HERMES_PYTHON
-    assert python.is_file(), 'Run this profile integration test on the Hermes host (set HERMES_PYTHON)'
+    if not python.is_file() or not Path(config['cwd_prefixes'][0]).is_dir():
+        pytest.skip('needs the Hermes host: HERMES_PYTHON and the profile repo must exist')
+    home, path, registry, _, _, _ = prepare(tmp_path)
     probe = r'''
 import json, sys, yaml
 from hermes_cli.tools_config import _get_platform_tools

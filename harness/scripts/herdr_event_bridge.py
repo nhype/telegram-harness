@@ -40,6 +40,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
+# The bridge is also loaded by path (registry validation, route script): find its sibling module.
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+import webhook_ids  # noqa: E402
+
 
 def default_socket() -> str:
     """Herdr's API socket for the current user ($XDG_CONFIG_HOME/herdr/herdr.sock)."""
@@ -994,6 +1000,7 @@ class BridgeConfig:
         "herdr_bin": shutil.which("herdr") or "herdr",
         "session": "default",
         "project": "",
+        "profile": "",
         "cwd_prefix": (),
         "sibling_prefix": False,
         "webhook_timeout": MAX_WEBHOOK_TIMEOUT,
@@ -1044,6 +1051,7 @@ class BridgeConfig:
             herdr_bin=args.herdr_bin,
             session=args.session,
             project=args.project,
+            profile=getattr(args, "profile", "") or "",
             cwd_prefix=list(args.cwd_prefix or []),
             sibling_prefix=bool(args.sibling_prefix),
             webhook_timeout=args.webhook_timeout,
@@ -1697,13 +1705,22 @@ class Bridge:
                   if isinstance(entry.get("inflight"), dict)}
         if not active:
             return
-        chats = {wf: f"webhook:{self.cfg.webhook}:{inf['delivery_id']}"
-                 for wf, inf in active.items() if inf.get("delivery_id")}
+        # Hermes has keyed webhook sessions as webhook:<route>:<id> and, since 0.21.5, as
+        # webhook:v2:<b64 [profile, route, id]> (profile "default" on an unbound route).
+        chats: dict[str, list[str]] = {}
+        for wf, inf in active.items():
+            if inf.get("delivery_id"):
+                ids = webhook_ids.session_chat_ids(self.cfg.webhook, inf["delivery_id"], self.cfg.profile or None)
+                ids.append(webhook_ids.session_chat_ids(self.cfg.webhook, inf["delivery_id"], None)[1])
+                chats[wf] = list(dict.fromkeys(ids))
         oldest = min(float(inf.get("since") or now) for inf in active.values())
-        rows = lookup_controller_sessions(self.cfg.state_db, sorted(set(chats.values())), oldest - 600)
+        rows = lookup_controller_sessions(self.cfg.state_db, sorted({c for ids in chats.values() for c in ids}),
+                                          oldest - 600)
         for workflow, inflight in active.items():
             age = now - float(inflight.get("since") or now)
-            row = rows.get(chats.get(workflow, "")) if rows is not None else None
+            row = None
+            if rows is not None:
+                row = next((rows[c] for c in chats.get(workflow, []) if c in rows), None)
             how = None
             ended_at = now
             if row is not None:
@@ -1924,6 +1941,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--herdr-bin", default=shutil.which("herdr") or "herdr")
     parser.add_argument("--session", default="default")
     parser.add_argument("--project", default=None)
+    parser.add_argument("--profile", default=None, help="Hermes profile the route is bound to (default: from --config)")
     parser.add_argument("--cwd-prefix", action="append", default=None)
     parser.add_argument("--sibling-prefix", action="store_true", default=None)
     parser.add_argument("--registry-poll", type=float, default=1.0,
@@ -1953,6 +1971,8 @@ def apply_pipeline_config(args: argparse.Namespace) -> argparse.Namespace:
         cfg = loaded
     if args.project is None:
         args.project = cfg.get("project", "")
+    if getattr(args, "profile", None) is None:
+        args.profile = cfg.get("profile", "")
     if args.webhook is None:
         args.webhook = cfg.get("route", "herdr-agent-events")
     if args.cwd_prefix is None:

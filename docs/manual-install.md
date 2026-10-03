@@ -73,6 +73,7 @@ If no Herdr server is managed yet, render `herdr-server.service.in` the same way
 ```bash
 openspec init --tools claude /srv/acme
 cp templates/claude-settings.json /srv/acme/.claude/settings.json   # if it has none
+herdr integration install claude   # Claude Code reports its session id to Herdr (fresh sessions)
 lean-ctx wrap claude
 claude                       # log in once
 hermes -p acme model         # pick the model Hermes runs on

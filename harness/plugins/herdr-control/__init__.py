@@ -61,7 +61,7 @@ _KEY_ALIASES = {
 _KEY_HINTS = {"home": "ctrl+a", "end": "ctrl+e"}
 _KEYS_HELP = "enter, esc, tab, backtab, up, down, left, right, pageup, pagedown, backspace, delete, space, ctrl+<a-h,k,l,n,p,r-u,w-z>, 0-9, y, n"
 
-# Code sits next to this plugin (herdr-core when symlinked into a profile);
+# Code sits next to this plugin (this repo, when symlinked into a profile);
 # state belongs to the profile whose gateway imports it.
 CODE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = CODE_ROOT / "scripts"

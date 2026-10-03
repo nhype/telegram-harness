@@ -44,6 +44,26 @@ def active():
     return PROFILE_HOME is not None and Path(get_hermes_home()).resolve() == PROFILE_HOME
 
 
+def _load_webhook_ids():
+    """harness/scripts/webhook_ids.py, next to this plugin's code (it is symlinked into profiles)."""
+    import importlib.util
+    path = Path(__file__).resolve().parents[2] / 'scripts' / 'webhook_ids.py'
+    spec = importlib.util.spec_from_file_location('herdr_harness_webhook_ids', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+webhook_ids = _load_webhook_ids()
+
+
+def own_route_chat(chat_id):
+    """A session chat id of this profile's route: legacy, or Hermes 0.21.5+ v2 naming this profile
+    (host gateway) or "default" (a gateway of the profile's own)."""
+    parsed = webhook_ids.parse(chat_id)
+    return bool(ROUTE) and parsed is not None and parsed[1] == ROUTE and parsed[0] in (None, 'default', PROFILE)
+
+
 def norm(value):
     return str(value) if value not in (None, '') else None
 
@@ -176,7 +196,7 @@ def eligible(turn):
     origin = delivery.get(_MARKER)
     if (not origin or origin[0] is not turn._runner
             or source.user_id != 'webhook:' + ROUTE
-            or not str(source.chat_id).startswith('webhook:' + ROUTE + ':')
+            or not own_route_chat(source.chat_id)
             or ctx._status_chat_id != source.chat_id
             or destination(delivery) != origin[1]
             or not ctx.session_key):
@@ -223,7 +243,9 @@ def install():
             if (active() and route_name == ROUTE and auth is not None
                     and auth[0] is self and auth[1] is route_config
                     and (target := destination(route_config))):
-                delivery = self._delivery_info.get(f'webhook:{route_name}:{delivery_id}', {})
+                delivery = next((self._delivery_info[c]
+                                 for c in webhook_ids.session_chat_ids(route_name, delivery_id, profile)
+                                 if c in self._delivery_info), {})
                 if destination(delivery) == target:
                     delivery[_MARKER] = (self.gateway_runner, target)
         return task

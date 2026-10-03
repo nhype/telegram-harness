@@ -4,7 +4,7 @@
 
 | Piece | Where | What it does |
 |---|---|---|
-| Herdr server | `herdr server` (systemd unit `herdr-server.service` if the installer created it) | Runs agent panes, exposes a socket API and status events. |
+| Herdr server | `herdr server` (systemd unit `herdr-server.service` if the installer created it) | Runs agent panes, exposes a socket API and status events. Herdr's Claude Code integration (`herdr integration install claude`) reports each agent's session id, which the controller uses to verify a fresh session before Apply. |
 | Bridge | `harness/scripts/herdr_event_bridge.py`, unit `harness-bridge-<profile>.service` | Subscribes to Herdr status events for panes whose cwd is inside the configured repos, debounces them and delivers one webhook per event to Hermes. |
 | Task registry | `<profile>/state/herdr_tasks.json` (+ `herdr_registry.py`) | One record per task: pane, cwd, OpenSpec change, phase, policy, wait, notes, decisions. Written under a lock, validated like the bridge reads it. |
 | Route script | `harness/scripts/herdr_workflow_context.py` (linked as `<profile>/scripts/`) | Runs inside Hermes for every webhook: drops events of other projects or unknown tasks, and attaches the workflow (author + reviewer) from the registry. |

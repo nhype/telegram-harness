@@ -10,7 +10,15 @@ case "${1:-} ${2:-}" in
   "profile create") mkdir -p "$FAKE_HOME/profiles/$3/plugins" ;;
   "config path")
     if [[ -d "$home" ]]; then echo "$home/config.yaml"; else echo "Error: Profile does not exist."; fi ;;
-  "config get") echo "Config key not set: $3"; exit 1 ;;
+  "config get")
+    if [[ "$3" == approvals.smart_policy && "${FAKE_POLICY:-0}" == 1 ]]; then
+      printf 'My own policy line one.\nLine two.\n\n'  # a YAML block scalar ends with a newline
+    else
+      echo "Config key not set: $3"; exit 1
+    fi ;;
+  "webhook subscribe")
+    echo "  Created webhook subscription: $3"
+    echo "  Secret: route-hmac-secret-value" ;;
   "webhook list")  # like the real CLI: route names first, then plenty of detail lines
     grep -o "webhook subscribe herdr-[a-z0-9]*" "$STUB_LOG" | sed 's/webhook subscribe //' | sort -u
     for i in $(seq 20000); do echo "    detail line $i"; done ;;

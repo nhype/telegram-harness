@@ -9,9 +9,10 @@
 - **Smart approvals.** Commands of Hermes's own controller runs go through `approvals.mode: smart`:
   read-only checks are approved automatically, destructive ones are refused or escalated to you (see
   `templates/smart-policy.txt`; edit it to fit your project).
-- **Secrets stay local.** The bot token and webhook secret live in the profiles' `.env` files (mode
-  0600); `herdr-pipeline.json` is 0600 too. The installer passes the token through the environment only —
-  it never appears in a command line, a log or `--dry-run` output.
+- **Secrets stay local.** The bot token lives in the profile's `.env` (mode 0600), the route's HMAC
+  secret in Hermes's `webhook_subscriptions.json` (0600); `herdr-pipeline.json` is 0600 too. The
+  installer hands the token to the one process that stores it — it never appears in a command line, a
+  log, `--dry-run` output or the environment of the other tools it runs.
 - **The webhook listens on 127.0.0.1.** Only local processes (the bridge) can post events, and routes
   are HMAC-signed.
 - **No pane text leaves the host in payloads.** The bridge sends status metadata, not terminal output;

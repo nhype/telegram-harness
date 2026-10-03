@@ -1,6 +1,6 @@
 # Herdr Control Bridge
 
-Profile-local Hermes plugin that exposes Herdr control to the `demo` Telegram gateway through explicit named sessions and opaque Herdr IDs.
+Profile-local Hermes plugin that exposes Herdr control to a Hermes profile's Telegram gateway through explicit named sessions and opaque Herdr IDs.
 
 ## Telegram usage
 
@@ -89,7 +89,7 @@ and `Ctrl-U` become `ctrl+u`, `ARROWUP` becomes `up`, `RETURN` becomes `enter`, 
 
 - Plugin path: `~/.hermes/profiles/<profile>/plugins/herdr-control/` (a symlink into `telegram-harness/harness/plugins/`)
 - Enabled plugin: `herdr-control`
-- Enabled toolset on: `telegram`, `cli`
+- Enabled toolset on: `telegram`, `webhook` (set by install.sh)
 - Herdr integrations installed: `codex`, `claude`, `hermes`
 
 ## Verification

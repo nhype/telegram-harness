@@ -6,6 +6,8 @@ After=network-online.target
 Type=simple
 @USER_LINE@
 Environment=HOME=@HOME@
+# Agent panes inherit this environment: `claude`, `openspec` and `lean-ctx` must be on PATH.
+Environment=PATH=@PATH@
 ExecStart=@HERDR_BIN@ server
 Restart=always
 RestartSec=3

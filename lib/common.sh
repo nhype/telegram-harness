@@ -25,9 +25,11 @@ run() {
     local shown=("$@")
     case "${shown[0]}" in  # show the real commands behind the helpers
       hhost) shown[0]=hermes ;;
-      sysctl) if is_root; then shown[0]=systemctl; else shown[0]="systemctl --user"; fi ;;
+      sysctl) if is_root; then shown[0]=systemctl; else shown=(systemctl --user "${shown[@]:1}"); fi ;;
     esac
-    printf '[dry-run] %s\n' "${shown[*]}"
+    printf '[dry-run]'
+    printf ' %q' "${shown[@]}"
+    printf '\n'
   else
     "$@"
   fi
@@ -67,10 +69,11 @@ _home_from_config_path() {
 profile_home() { { hermes -p "$1" config path 2>/dev/null || true; } | _home_from_config_path; }
 host_home() { { hhost config path 2>/dev/null || true; } | _home_from_config_path; }
 
-_config_value() {
+_config_value() { # the whole value (multi-line values such as a YAML block stay intact)
   local value
-  value="$(tail -1 || true)"
+  value="$(cat || true)"
   case "$value" in "" | "Config key not set"* | None | null) return 0 ;; esac
+  [[ -n "${value//[[:space:]]/}" ]] || return 0
   printf '%s\n' "$value"
 }
 

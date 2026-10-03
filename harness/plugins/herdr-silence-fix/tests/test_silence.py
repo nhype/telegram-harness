@@ -65,6 +65,24 @@ def test_other_routes_profiles_and_forged_text_unchanged(installed,monkeypatch):
     monkeypatch.setattr(plugin,'get_hermes_home',lambda: Path('/non-exampleapp'))
     assert filters.display_kind_for_event(event()) is None
 
+def test_v2_chat_ids_of_own_route_are_machinery(installed, monkeypatch):
+    # Hermes 0.21.5+ keys webhook sessions as webhook:v2:<b64 [profile, route, delivery]>.
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))
+    import webhook_ids
+    monkeypatch.setattr(plugin, 'PROFILE', 'exampleapp')
+
+    def v2_event(profile):
+        chat = webhook_ids.session_chat_ids('herdr-agent-events', 'd1', profile)[1]
+        source = SessionSource(platform=Platform.WEBHOOK, chat_id=chat, chat_type='dm',
+                               user_id='webhook:herdr-agent-events')
+        return MessageEvent(text='background lifecycle event', source=source, message_id='d1')
+
+    for profile in ('exampleapp', 'default'):
+        assert filters.display_kind_for_event(v2_event(profile)) == filters.INTERNAL_NOTIFICATION_DISPLAY_KIND
+    assert filters.display_kind_for_event(v2_event('someone-else')) is None
+
+
 def test_failed_result_not_silenced(installed):
     assert not filters.is_intentional_silence_agent_result({'failed':True},'[SILENT]')
 
@@ -75,9 +93,9 @@ def test_idempotent_install_and_alias(installed):
 
 def test_settings_read_route_from_profile(tmp_path, monkeypatch):
     monkeypatch.setattr(plugin,'get_hermes_home',lambda: tmp_path)
-    assert plugin._settings() == (None, '')
-    (tmp_path/'herdr-pipeline.json').write_text('{"route": "herdr-agent-events"}')
-    assert plugin._settings() == (tmp_path.resolve(), 'herdr-agent-events')
+    assert plugin._settings() == (None, '', '')
+    (tmp_path/'herdr-pipeline.json').write_text('{"route": "herdr-acme", "profile": "acme"}')
+    assert plugin._settings() == (tmp_path.resolve(), 'herdr-acme', 'acme')
 
 @pytest.mark.parametrize('order',[('a','b'),('b','a')])
 def test_both_profile_scopes_classify_their_own_turns(tmp_path,monkeypatch,order):

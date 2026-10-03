@@ -22,6 +22,12 @@ def test_unit_templates_use_only_known_tokens():
         assert used <= UNIT_TOKENS, (unit.name, used - UNIT_TOKENS)
 
 
+def test_herdr_server_unit_sets_path_for_agent_shells():
+    # Pane shells inherit the server's environment; without PATH `claude` may not be found.
+    text = (ROOT / "templates" / "systemd" / "herdr-server.service.in").read_text()
+    assert "Environment=PATH=@PATH@" in text
+
+
 def test_webhook_prompt_names_the_controller_skill_and_project_placeholder():
     text = (ROOT / "templates" / "webhook-prompt.txt").read_text()
     assert "harness-controller" in text and "{{PROJECT}}" in text and "[SILENT]" in text

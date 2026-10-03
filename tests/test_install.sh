@@ -37,7 +37,6 @@ grep -q '"route": "herdr-acme"' "$P/herdr-pipeline.json" || fail "pipeline route
 [[ "$(stat -c %a "$P/.env")" == 600 ]] || fail ".env is not 0600"
 grep -q "^TELEGRAM_BOT_TOKEN=123:secret-token-value$" "$P/.env" || fail ".env lacks the bot token"
 grep -q "^TELEGRAM_ALLOWED_USERS=111111111$" "$P/.env" || fail ".env lacks the owner allowlist"
-grep -q "^WEBHOOK_SECRET=." "$FAKE_HOME/.env" || fail "host .env lacks a webhook secret"
 [[ "$(readlink "$P/scripts")" == "$ROOT/harness/scripts" ]] || fail "scripts is not linked"
 for plugin in herdr-control herdr-approval-bridge herdr-silence-fix; do
   [[ -f "$P/plugins/$plugin/__init__.py" ]] || fail "plugin $plugin is not linked"
@@ -60,6 +59,26 @@ creates_before="$(grep -c "profile create" "$STUB_LOG")"
 [[ "$(grep -c "profile create" "$STUB_LOG")" == "$creates_before" ]] || fail "rerun created the profile again"
 grep -q "my project notes" "$P/skills/harness-controller/SKILL.md" || fail "rerun overwrote an edited skill"
 [[ "$(grep -c "^TELEGRAM_BOT_TOKEN=" "$P/.env")" == 1 ]] || fail "rerun duplicated .env keys"
+# An update run (only --profile) keeps .env values the user edited.
+sed -i 's/^TELEGRAM_ALLOWED_USERS=.*/TELEGRAM_ALLOWED_USERS=111111111,222222222/' "$P/.env"
+"$ROOT/install.sh" --yes --skip-deps --no-services --no-agent-setup --profile acme >/dev/null 2>&1 ||
+  fail "update run with --profile exited non-zero"
+grep -q "^TELEGRAM_ALLOWED_USERS=111111111,222222222$" "$P/.env" || fail "update run reset the edited allowlist"
+# A smart policy the user wrote (multi-line) is never replaced.
+before="$(grep -c "config set approvals.smart_policy" "$STUB_LOG")"
+FAKE_POLICY=1 "$ROOT/install.sh" "${ARGS[@]}" >/dev/null 2>&1 || fail "rerun with own policy exited non-zero"
+[[ "$(grep -c "config set approvals.smart_policy" "$STUB_LOG")" == "$before" ]] || fail "rerun replaced the user's smart policy"
+# The route's HMAC secret printed by `hermes webhook subscribe` never reaches the install output.
+out="$("$ROOT/install.sh" "${ARGS[@]}" 2>&1)" || fail "rerun exited non-zero"
+grep -q "route-hmac-secret-value" <<<"$out" && fail "install output shows the route secret"
+# DRY_RUN in the environment does not silently turn a real run into a dry one.
+rm -rf "$FAKE_HOME" && mkdir -p "$FAKE_HOME"
+DRY_RUN=1 "$ROOT/install.sh" "${ARGS[@]}" >/dev/null 2>&1 || fail "run with DRY_RUN=1 in env exited non-zero"
+[[ -d "$P" ]] || fail "DRY_RUN=1 in the environment made the install a dry run"
+# A trailing slash or ~ in --repo is normalized.
+"$ROOT/install.sh" --yes --skip-deps --no-services --no-agent-setup --project Acme --repo "$WORK/repo/" \
+  --owner-id 111111111 >/dev/null 2>&1 || fail "trailing-slash repo exited non-zero"
+grep -q "\"$WORK/repo\"" "$P/herdr-pipeline.json" || fail "trailing slash kept in cwd_prefixes"
 
 # 4. Bad input is refused before anything is written.
 rm -rf "$FAKE_HOME" && mkdir -p "$FAKE_HOME"
@@ -81,9 +100,11 @@ grep -q "/etc/systemd/system/harness-bridge-acme.service" <<<"$out" || fail "roo
 out="$(FAKE_UID=0 FAKE_GATEWAY_INSTALLED=1 PATH="$SVC_PATH" "$ROOT/install.sh" --dry-run "${SVC[@]}" 2>&1)" || fail "restart dry run: $out"
 grep -q "hermes gateway restart" <<<"$out" || fail "an installed host gateway is not restarted"
 grep -q "gateway install" <<<"$out" && fail "an installed host gateway is installed again"
+grep -q "systemctl try-restart harness-bridge-acme.service" <<<"$out" || fail "a re-run does not restart the bridge on new code"
+grep -q "restart herdr-server" <<<"$out" && fail "a re-run restarts the herdr server (it would kill the agents)"
 
 UNITS="$WORK/units"
-FAKE_UID=1000 HARNESS_UNIT_DIR="$UNITS" PATH="$SVC_PATH" "$ROOT/install.sh" "${SVC[@]}" >/dev/null 2>&1 ||
+FAKE_UID=1000 HARNESS_UNIT_DIR="$UNITS" HARNESS_DOCTOR_WAIT=0 PATH="$SVC_PATH" "$ROOT/install.sh" "${SVC[@]}" >/dev/null 2>&1 ||
   fail "service install against stubs failed"
 UNIT="$UNITS/harness-bridge-acme.service"
 [[ -f "$UNIT" ]] || fail "bridge unit was not written"
@@ -91,5 +112,19 @@ grep -q "@[A-Z_]*@" "$UNIT" && fail "bridge unit has unrendered tokens"
 grep -q "^Environment=HERMES_HOME=$FAKE_HOME$" "$UNIT" || fail "bridge does not talk to the host gateway home"
 grep -q -- "--state-db $FAKE_HOME/profiles/acme/state.db" "$UNIT" || fail "bridge does not read the profile's state.db"
 grep -q -- "--config $FAKE_HOME/profiles/acme/herdr-pipeline.json" "$UNIT" || fail "bridge does not read the profile's pipeline"
+
+# 6. Agent setup: Herdr's Claude Code integration (session ids for fresh sessions), lean-ctx, settings.
+rm -rf "$FAKE_HOME" && mkdir -p "$FAKE_HOME" && rm -rf "$WORK/repo/.claude"
+"$ROOT/install.sh" --yes --skip-deps --no-services --project Acme --repo "$WORK/repo" --owner-id 111111111 \
+  >/dev/null 2>&1 || fail "install with agent setup exited non-zero"
+grep -q "herdr integration install claude" "$STUB_LOG" || fail "Herdr's Claude Code integration was not installed"
+grep -q "lean-ctx wrap claude" "$STUB_LOG" || fail "lean-ctx was not wired into Claude Code"
+[[ -f "$WORK/repo/.claude/settings.json" ]] || fail "repo did not get .claude/settings.json"
+doctor="$("$ROOT/bin/harness" doctor acme --no-services 2>&1 || true)"
+grep -q "OK    herdr integration for Claude Code" <<<"$doctor" || fail "doctor does not confirm the Herdr integration"
+installs_before="$(grep -c "herdr integration install claude" "$STUB_LOG")"
+"$ROOT/install.sh" --yes --skip-deps --no-services --profile acme >/dev/null 2>&1 || fail "agent-setup rerun failed"
+[[ "$(grep -c "herdr integration install claude" "$STUB_LOG")" == "$installs_before" ]] ||
+  fail "a current Herdr integration was installed again"
 
 echo "install tests: OK"

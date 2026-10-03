@@ -35,6 +35,13 @@ hermes webhook list | grep herdr-acme >/dev/null || fail "route not registered o
 { "$ROOT/bin/harness" doctor acme --no-services || true; } | grep "OK    webhook route herdr-acme" >/dev/null ||
   fail "doctor does not see the route"
 
+step "a fake OpenAI-compatible model for the profile (answers [SILENT])"
+python3 tests/fake_llm.py 9999 &
+hermes -p acme config set model.provider custom >/dev/null
+hermes -p acme config set model.default fake >/dev/null
+hermes -p acme config set model.base_url http://127.0.0.1:9999/v1 >/dev/null
+hermes -p acme config set model.api_key test-key >/dev/null
+
 step "host gateway"
 hermes gateway run >/tmp/gateway.log 2>&1 &
 for _ in $(seq 90); do
@@ -44,7 +51,12 @@ done
 python3 -c 'import socket; socket.create_connection(("127.0.0.1", 8650), 1)' || fail "webhook listener never opened"
 
 step "a payload for no registered task is ignored by the route script (doctor's probe)"
-out="$(hermes webhook test herdr-acme --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1)"
+# The listener opens before a first-start gateway has finished preparing: retry like doctor --wait.
+for _ in $(seq 40); do
+  out="$(hermes webhook test herdr-acme --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1 || true)"
+  grep -q 'Response (200)' <<<"$out" && break
+  sleep 3
+done
 echo "$out" | tail -2
 grep -q 'Response (200)' <<<"$out" || fail "route did not answer 200"
 grep -q '"reason": "script"' <<<"$out" || fail "route script did not run for the profile route"
@@ -54,18 +66,41 @@ python3 harness/scripts/herdr_registry.py --registry "$P/state/herdr_tasks.json"
   '{"id":"acme-demo","pane_id":"w1:p1","cwd":"/srv/acme","change":"demo","phase":"propose"}' >/dev/null
 cat >/tmp/deliver.py <<'EOF'
 import sys
+from pathlib import Path
 sys.path.insert(0, "harness/scripts")
 import herdr_event_bridge as bridge
-registry = sys.argv[1]
+registry = Path(sys.argv[1])
 tasks, _ = bridge.load_tasks(registry)
 state = {"version": 1, "panes": {}, "pending": []}
 bridge.transition(state, tasks["acme-demo"], "working")
 event = bridge.transition(state, tasks["acme-demo"], "idle")
 result = bridge.deliver_payload("hermes", "herdr-acme", event, 60)
 print(result)
-sys.exit(0 if result.outcome == "accepted" else 1)
+if result.outcome != "accepted":
+    sys.exit(1)
+# The bridge keeps one controller per workflow until the run's session is closed in the
+# profile's state.db; an unclosed session holds the workflow for 30 minutes.
+import time
+import webhook_ids
+chats = webhook_ids.session_chat_ids("herdr-acme", result.delivery_id, "acme")
+chats.append(webhook_ids.session_chat_ids("herdr-acme", result.delivery_id, None)[1])
+profile_db = registry.parent.parent / "state.db"
+host_db = Path.home() / ".hermes" / "state.db"
+for _ in range(90):
+    rows = bridge.lookup_controller_sessions(profile_db, chats, 0) or {}
+    closed = [rows[c] for c in chats if c in rows and rows[c][1] is not None]
+    if closed:
+        print(f"controller session closed in the profile state.db: {closed[0]}")
+        sys.exit(0)
+    time.sleep(2)
+print(f"profile db: {bridge.lookup_controller_sessions(profile_db, chats, 0)}")
+print(f"host db:    {bridge.lookup_controller_sessions(host_db, chats, 0)}")
+sys.exit(2)
 EOF
-python3 /tmp/deliver.py "$P/state/herdr_tasks.json" || fail "the bridge event was not accepted"
+rc=0
+python3 /tmp/deliver.py "$P/state/herdr_tasks.json" || rc=$?
+[[ $rc == 1 ]] && fail "the bridge event was not accepted"
+[[ $rc == 2 ]] && fail "the controller session was never closed in the profile's state.db"
 
 echo
 echo "hermes integration: OK"
