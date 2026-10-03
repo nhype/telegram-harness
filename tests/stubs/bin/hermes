@@ -3,6 +3,12 @@
 # Without -p it acts on the host (default) home $FAKE_HOME; with -p P on $FAKE_HOME/profiles/P.
 set -u
 echo "hermes $*" >> "${STUB_LOG:?STUB_LOG must be set}"
+if [[ "${1:-}" == "--print-runtime-command" ]]; then  # the current launcher's runtime: system python + stubs
+  runtime="$(cd "$(dirname "${BASH_SOURCE[0]}")/../runtime" && pwd)"
+  printf '["%s", "-I", "-c", "import sys; sys.path.insert(0, \x27%s\x27); import hermes_bootstrap"]\n' \
+    "$(command -v python3)" "$runtime"
+  exit 0
+fi
 home="${FAKE_HOME:?}"
 if [[ "${1:-}" == "-p" ]]; then home="$FAKE_HOME/profiles/$2"; shift 2; fi
 case "${1:-} ${2:-}" in

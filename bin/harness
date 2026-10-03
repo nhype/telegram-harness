@@ -9,11 +9,14 @@ DRY_RUN=0
 usage() {
   cat <<'EOF'
 Usage: bin/harness <command> <profile> [--no-services] [--wait SECONDS]
+       bin/harness test-plugins [pytest args]
 
   doctor               check every piece of the installation (exit 1 if anything fails);
                        --wait retries the live checks (services that just started) for up to SECONDS
   status               services, tasks and the last bridge log lines
   uninstall-services   remove the bridge service and the webhook route (profile data is kept)
+  test-plugins         run the plugin tests inside Hermes's own runtime (they patch Hermes
+                       internals: run this after `hermes update`)
 EOF
 }
 
@@ -107,7 +110,36 @@ uninstall_services() {
   log "profile data kept (delete it with: hermes profile delete $profile)"
 }
 
+test_plugins() { # the plugins patch Hermes internals: test them with Hermes's interpreter
+  local cmd py agent="" cache="${XDG_CACHE_HOME:-$HOME/.cache}/telegram-harness/pytest"
+  have hermes || die "hermes is not installed"
+  if cmd="$(hermes --print-runtime-command 2>/dev/null)" && [[ "$cmd" == "["* ]]; then
+    py="$(python3 -c 'import json, sys; print(json.loads(sys.argv[1])[0])' "$cmd")"
+    agent="$(python3 -c 'import json, re, sys
+m = re.search(r"sys\.path\.insert\(0, \x27([^\x27]+)\x27\)", " ".join(json.loads(sys.argv[1])))
+print(m.group(1) if m else "")' "$cmd")"
+  else  # older Hermes: a virtualenv next to the hermes script
+    py="$(dirname "$(readlink -f "$(command -v hermes)")")/python"
+  fi
+  [[ -x "$py" ]] || die "cannot find the Python that Hermes runs on"
+  if [[ ! -d "$cache/pytest" ]]; then
+    log "installing pytest for the Hermes runtime into $cache"
+    "$py" -m pip install -q --disable-pip-version-check --target "$cache" pytest pytest-asyncio
+  fi
+  cd "$HARNESS_ROOT"
+  # shellcheck disable=SC2016  # a Python program, not shell: nothing to expand
+  env -u PYTHONHOME -u PYTHONPATH -u VIRTUAL_ENV "$py" -I -c 'import os, sys
+agent, cache = sys.argv[1], sys.argv[2]
+sys.path[:0] = [p for p in (agent, cache, os.getcwd()) if p]
+if agent:  # the current launcher: enter its dependency environment like `hermes` does
+    os.environ["HERMES_HOME"] = os.environ.get("HERMES_HOME") or str(__import__("hermes_constants").get_default_hermes_root())
+    import hermes_bootstrap  # noqa: F401
+import pytest
+sys.exit(pytest.main(sys.argv[3:]))' "$agent" "$cache" -q -p no:cacheprovider harness/plugins "$@"
+}
+
 main() {
+  if [[ "${1:-}" == test-plugins ]]; then shift; test_plugins "$@"; return; fi
   local cmd="${1:-}" profile="${2:-}" no_services=0
   if [[ -z "$cmd" || -z "$profile" || "$cmd" == -h || "$cmd" == --help ]]; then usage; exit 2; fi
   shift 2

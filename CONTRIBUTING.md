@@ -13,8 +13,8 @@ shellcheck -x install.sh bin/harness lib/common.sh tests/*.sh
 Slower, optional:
 
 ```bash
-~/.hermes/hermes-agent/venv/bin/python -m pytest harness/plugins   # plugin tests that patch Hermes internals
-bash tests/test_hermes_integration.sh                              # real Hermes in a container (needs docker)
+bin/harness test-plugins                  # plugin tests inside Hermes's runtime (they patch its internals)
+bash tests/test_hermes_integration.sh     # real Hermes in a container (needs docker)
 ```
 
 ## Rules

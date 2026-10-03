@@ -98,15 +98,15 @@ hermes profile delete <profile>            # optional: the profile and its histo
 | Component | Role | Tested version | License |
 |---|---|---|---|
 | [Herdr](https://herdr.dev) | terminal workspace for agents, status events | 0.8.0 | Apache-2.0 |
-| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Telegram gateway, chat + controller runs | 0.21.4 | MIT |
+| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Telegram gateway, chat + controller runs | 0.21.5 (d795726f) | MIT |
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | the coding agent | 2.1.288 | commercial |
 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) | spec-driven change workflow | 1.13.1 | MIT |
 | [lean-ctx](https://github.com/yvgude/lean-ctx) | context compression for agents | 3.10.2 | Apache-2.0 |
 
 The harness itself is the bridge, the task registry, the route script, three Hermes plugins, two skills
 and the installer. The plugins patch a few Hermes gateway internals, so a much newer Hermes may need an
-update here; after `hermes update`, run the plugin tests with Hermes's own interpreter
-(`~/.hermes/hermes-agent/venv/bin/python -m pytest harness/plugins`).
+update here; after `hermes update`, run `bin/harness test-plugins` (the plugin tests, inside Hermes's
+own runtime).
 
 ## Documentation
 

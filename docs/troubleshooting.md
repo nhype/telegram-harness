@@ -14,7 +14,8 @@ services a minute: `bin/harness doctor <profile> --wait 60`.
 | An agent sits idle and nobody reacts | a wait without a real end, or a question that never reached you | `bin/harness status <profile>`; ask the bot "status?" — it fixes stalls it finds and notes the cause |
 | The bot asks you to `/login` | an agent's Claude Code session expired | open the pane (`herdr`), run `/login`, then tell the bot "done" |
 | Approval prompt timed out at night | a controller command was not on the read-only list | add the command pattern to the smart policy (`hermes -p <profile> config set approvals.smart_policy …`) |
-| After `hermes update` plugins misbehave | Hermes internals changed | run the plugin tests with Hermes's interpreter (below); update this repo (`git pull && ./install.sh --profile <profile>`) |
+| After `hermes update` plugins misbehave | Hermes internals changed | `bin/harness test-plugins`; update this repo (`git pull && ./install.sh --profile <profile>`) |
+| After `hermes update` the bridge log shows `Connection refused` | the update moved per-profile gateways onto the host gateway (older setups) and their old webhook ports are gone | `./install.sh --profile <profile>`: it registers the route on the host gateway and rewrites the bridge unit |
 
 ## Host gateway
 
@@ -22,7 +23,9 @@ Hermes serves every profile from one host gateway (the default profile's `hermes
 does not serve a profile that still runs a gateway of its own (from an older Hermes setup) or whose bot
 token another profile already uses. Then the route answers 404 or the profile's Telegram adapter stays
 parked. Move such profiles onto the host gateway with `hermes gateway migrate` (see `hermes gateway
---help`) and give every profile its own bot token.
+--help`) and give every profile its own bot token. `hermes update --yes` may run that migration by
+itself, even when `hermes update --plan` only listed restarts; re-run `./install.sh --profile <profile>`
+afterwards.
 
 ## Logs
 
@@ -32,8 +35,9 @@ journalctl -u hermes-gateway -f
 hermes -p <profile> logs
 ```
 
-Plugin tests that patch Hermes internals run only with Hermes's own interpreter:
+Plugin tests that patch Hermes internals run inside Hermes's own runtime (pytest is installed into
+`~/.cache/telegram-harness/pytest`, never into Hermes):
 
 ```bash
-~/.hermes/hermes-agent/venv/bin/python -m pytest harness/plugins
+bin/harness test-plugins
 ```

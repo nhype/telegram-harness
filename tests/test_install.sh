@@ -127,4 +127,13 @@ installs_before="$(grep -c "herdr integration install claude" "$STUB_LOG")"
 [[ "$(grep -c "herdr integration install claude" "$STUB_LOG")" == "$installs_before" ]] ||
   fail "a current Herdr integration was installed again"
 
+# 7. bin/harness test-plugins runs the plugin tests in the runtime `hermes --print-runtime-command` names.
+if python3 -m pip --version >/dev/null 2>&1; then
+  out="$(XDG_CACHE_HOME="$WORK/cache" "$ROOT/bin/harness" test-plugins -k open_questions 2>&1)" ||
+    fail "test-plugins failed: $(tail -5 <<<"$out")"
+  grep -Eq "[0-9]+ passed" <<<"$out" || fail "test-plugins ran no tests"
+else
+  echo "skip: test-plugins (no pip in this environment)"
+fi
+
 echo "install tests: OK"

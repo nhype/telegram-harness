@@ -104,15 +104,15 @@ hermes profile delete <профиль>            # по желанию: сам 
 | Компонент | Роль | Проверенная версия | Лицензия |
 |---|---|---|---|
 | [Herdr](https://herdr.dev) | терминальное рабочее пространство агентов, события статусов | 0.8.0 | Apache-2.0 |
-| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Telegram-gateway, чат и запуски controller | 0.21.4 | MIT |
+| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Telegram-gateway, чат и запуски controller | 0.21.5 (d795726f) | MIT |
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | агент-программист | 2.1.288 | коммерческая |
 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) | работа с изменениями через спецификации | 1.13.1 | MIT |
 | [lean-ctx](https://github.com/yvgude/lean-ctx) | сжатие контекста агентов | 3.10.2 | Apache-2.0 |
 
 Сам harness — это bridge, реестр задач, route-скрипт, три плагина Hermes, два скилла и установщик.
 Плагины подменяют несколько внутренних функций gateway Hermes, поэтому на заметно более новой версии
-Hermes здесь может понадобиться обновление. После `hermes update` прогоните тесты плагинов
-интерпретатором Hermes: `~/.hermes/hermes-agent/venv/bin/python -m pytest harness/plugins`.
+Hermes здесь может понадобиться обновление. После `hermes update` запустите `bin/harness test-plugins`:
+он прогонит тесты плагинов внутри runtime самого Hermes.
 
 ## Документация (на английском)
 
