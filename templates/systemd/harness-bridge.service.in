@@ -6,9 +6,10 @@ After=network-online.target @GATEWAY_UNIT@
 Type=simple
 @USER_LINE@
 Environment=HOME=@HOME@
-Environment=HERMES_HOME=@HERMES_HOME@
+# The host gateway home: `hermes webhook test` finds the profile's route there.
+Environment=HERMES_HOME=@HOST_HOME@
 Environment=PATH=@PATH@
-ExecStart=@PYTHON@ @ROOT@/harness/scripts/herdr_event_bridge.py --config @HERMES_HOME@/herdr-pipeline.json --registry @HERMES_HOME@/state/herdr_tasks.json --state @HERMES_HOME@/state/herdr_event_bridge_state.json --socket @SOCKET@ --hermes-bin @HERMES_BIN@ --herdr-bin @HERDR_BIN@ --session default
+ExecStart=@PYTHON@ @ROOT@/harness/scripts/herdr_event_bridge.py --config @PROFILE_HOME@/herdr-pipeline.json --registry @PROFILE_HOME@/state/herdr_tasks.json --state @PROFILE_HOME@/state/herdr_event_bridge_state.json --state-db @PROFILE_HOME@/state.db --socket @SOCKET@ --hermes-bin @HERMES_BIN@ --herdr-bin @HERDR_BIN@ --session default
 Restart=always
 RestartSec=3
 

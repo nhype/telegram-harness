@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
-# Test stub: systemd is present but does nothing.
+# Test stub: systemd is present; `[--user] cat` reports the host gateway unit as installed only
+# when FAKE_GATEWAY_INSTALLED=1.
+for arg in "$@"; do
+  if [[ "$arg" == cat ]]; then [[ "${FAKE_GATEWAY_INSTALLED:-0}" == 1 ]]; exit; fi
+done
 exit 0

@@ -8,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "harness" / "scripts"))
 from herdr_event_bridge import load_pipeline_config  # noqa: E402
 
-UNIT_TOKENS = {"@PROFILE@", "@GATEWAY_UNIT@", "@USER_LINE@", "@HOME@", "@HERMES_HOME@", "@PATH@",
-               "@PYTHON@", "@ROOT@", "@SOCKET@", "@HERMES_BIN@", "@HERDR_BIN@", "@WANTED_BY@"}
+UNIT_TOKENS = {"@PROFILE@", "@GATEWAY_UNIT@", "@USER_LINE@", "@HOME@", "@HOST_HOME@", "@PROFILE_HOME@",
+               "@PATH@", "@PYTHON@", "@ROOT@", "@SOCKET@", "@HERMES_BIN@", "@HERDR_BIN@", "@WANTED_BY@"}
 
 
 def test_pipeline_example_is_valid():

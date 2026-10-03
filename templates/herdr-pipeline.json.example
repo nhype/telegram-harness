@@ -3,7 +3,7 @@
   "project": "Acme",
   "cwd_prefixes": ["/srv/acme"],
   "sibling_prefix": true,
-  "route": "herdr-agent-events",
+  "route": "herdr-acme",
   "chat_id": "111111111",
   "owner_user_id": "111111111",
   "approval_tag": "[Acme Herdr approval]"

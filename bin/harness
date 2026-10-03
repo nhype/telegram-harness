@@ -11,7 +11,7 @@ Usage: bin/harness <command> <profile> [--no-services]
 
   doctor               check every piece of the installation (exit 1 if anything fails)
   status               services, tasks and the last bridge log lines
-  uninstall-services   stop and remove the bridge and gateway services (profile data is kept)
+  uninstall-services   remove the bridge service and the webhook route (profile data is kept)
 EOF
 }
 
@@ -24,10 +24,10 @@ check() { # check NAME HINT CMD...
   if "$@" >/dev/null 2>&1; then ok "$name"; else bad "$name" "$hint"; fi
 }
 
-route_registered() { hermes -p "$1" webhook list 2>/dev/null | grep -q "$ROUTE"; }
+route_registered() { hhost webhook list 2>/dev/null | grep -q "$(route_name "$1")"; }
 bridge_subscribed() { journal "$(bridge_unit "$1")" -n 300 -o cat --no-pager 2>/dev/null | grep -q "subscribed project="; }
-webhook_answers() {
-  hermes -p "$1" webhook test "$ROUTE" --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1 |
+webhook_answers() { # a payload naming no registered task: the route script ignores it, no agent runs
+  hhost webhook test "$(route_name "$1")" --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1 |
     grep -q "Response (200)"
 }
 
@@ -47,11 +47,11 @@ doctor() {
     check "plugin $plugin" "re-run ./install.sh --profile $profile" test -f "$home/plugins/$plugin/__init__.py"
   done
   check "skill harness-controller" "re-run ./install.sh --profile $profile" test -f "$home/skills/harness-controller/SKILL.md"
-  check "webhook route $ROUTE" "re-run ./install.sh --profile $profile" route_registered "$profile"
+  check "webhook route $(route_name "$profile") (host gateway)" "re-run ./install.sh --profile $profile" route_registered "$profile"
   if [[ "$no_services" == 1 ]]; then
     skip "services, herdr socket, live webhook" "--no-services"
   else
-    check "gateway service" "$(sysctl_name) status $(gateway_unit "$profile")" sysctl is-active --quiet "$(gateway_unit "$profile")"
+    check "host gateway service" "$(sysctl_name) status $GATEWAY_UNIT" sysctl is-active --quiet "$GATEWAY_UNIT"
     check "bridge service" "$(sysctl_name) status $(bridge_unit "$profile")" sysctl is-active --quiet "$(bridge_unit "$profile")"
     check "herdr socket $(herdr_socket)" "start it: herdr server (or enable herdr-server.service)" test -S "$(herdr_socket)"
     check "bridge subscribed to Herdr" "see: bin/harness status $profile" bridge_subscribed "$profile"
@@ -64,7 +64,7 @@ sysctl_name() { if is_root; then echo systemctl; else echo "systemctl --user"; f
 
 status() {
   local profile="$1" home
-  sysctl --no-pager status "$(gateway_unit "$profile")" "$(bridge_unit "$profile")" 2>/dev/null | grep -E '●|Active:' || true
+  sysctl --no-pager status "$GATEWAY_UNIT" "$(bridge_unit "$profile")" 2>/dev/null | grep -E '●|Active:' || true
   home="$(profile_home "$profile")"
   if [[ -n "$home" ]]; then
     python3 "$HARNESS_ROOT/harness/scripts/herdr_registry.py" --registry "$home/state/herdr_tasks.json" list 2>/dev/null || true
@@ -78,9 +78,9 @@ uninstall_services() {
   run sysctl disable --now "$unit" || true
   run rm -f "$(unit_dir)/$unit"
   run sysctl daemon-reload
-  if is_root; then run hermes -p "$profile" gateway uninstall --system || true
-  else run hermes -p "$profile" gateway uninstall || true; fi
-  log "services removed; profile data kept (delete it with: hermes profile delete $profile)"
+  run hhost webhook remove "$(route_name "$profile")" || true
+  log "bridge and route removed; the shared host gateway keeps running for other profiles"
+  log "profile data kept (delete it with: hermes profile delete $profile)"
 }
 
 main() {

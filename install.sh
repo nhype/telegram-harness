@@ -9,7 +9,7 @@ export PATH="$HOME/.local/bin:$PATH"
 PROJECT="" PROFILE="" OWNER="" PORT="" TOKEN_ENV="TELEGRAM_BOT_TOKEN"
 REPOS=()
 YES=0 SKIP_DEPS=0 NO_SERVICES=0 NO_AGENT_SETUP=0 SIBLING=0
-HOME_P=""
+HOME_P="" HOST_HOME=""
 
 usage() {
   cat <<'EOF'
@@ -20,7 +20,8 @@ Usage: ./install.sh [options]
   --profile NAME        Hermes profile name (default: project name, lowercase alphanumeric)
   --owner-id ID         your numeric Telegram user id (the only account the bot obeys)
   --bot-token-env VAR   read the bot token from this environment variable (default TELEGRAM_BOT_TOKEN)
-  --webhook-port N      local port for the Hermes webhook listener (default: first free from 8650)
+  --webhook-port N      port of the host gateway's localhost webhook listener, if none is configured yet
+                        (default: first free from 8650)
   --sibling             also route agents working in sibling dirs such as <repo>-worktrees/*
   --yes                 non-interactive: install missing tools, never prompt (missing values are errors)
   --skip-deps           do not install third-party tools
@@ -138,7 +139,7 @@ ensure() { # ensure BIN "install command"
     read -rp "Install $bin with: $cmd ? [Y/n] " answer
     [[ "$answer" =~ ^[Nn] ]] && die "$bin is required"
   fi
-  run bash -c "$cmd"
+  run bash -c "set -o pipefail; $cmd"  # a failed download must not look like a successful install
   hash -r
   have "$bin" || [[ "$DRY_RUN" == 1 ]] || die "$bin was installed but is not on PATH; add ~/.local/bin to PATH and re-run"
 }
@@ -146,7 +147,8 @@ ensure() { # ensure BIN "install command"
 install_deps() {
   [[ "$SKIP_DEPS" == 1 ]] && { log "skipping third-party installs (--skip-deps)"; return 0; }
   ensure herdr "curl -fsSL https://herdr.dev/install.sh | sh"
-  ensure hermes "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash"
+  # The project site can refuse some networks; the same script is in the repo.
+  ensure hermes "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-setup --non-interactive || curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --skip-setup --non-interactive"
   ensure claude "curl -fsSL https://claude.ai/install.sh | bash"
   ensure openspec "npm install -g @fission-ai/openspec"
   ensure lean-ctx "curl -fsSL https://leanctx.com/install.sh | sh"
@@ -185,20 +187,10 @@ setup_profile() {
   fi
   export TELEGRAM_ALLOWED_USERS="$OWNER" TELEGRAM_HOME_CHANNEL="$OWNER"
   helper env --home "$HOME_P" --force TELEGRAM_ALLOWED_USERS TELEGRAM_HOME_CHANNEL
-  if ! grep -qs '^WEBHOOK_SECRET=.' "$HOME_P/.env"; then
-    WEBHOOK_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-    export WEBHOOK_SECRET
-    helper env --home "$HOME_P" WEBHOOK_SECRET
-  fi
 
-  [[ -n "$PORT" ]] || PORT="$(hermes_config_get "$PROFILE" platforms.webhook.extra.port)"
-  [[ -n "$PORT" ]] || PORT="$(free_port)"
-  hcfg platforms.webhook.enabled true
-  hcfg platforms.webhook.extra.host 127.0.0.1
-  hcfg platforms.webhook.extra.port "$PORT"
   hcfg approvals.mode smart
   hcfg approvals.timeout 300
-  if [[ -z "$(hermes_config_get "$PROFILE" approvals.smart_policy)" ]]; then
+  if [[ -z "$(profile_config_get "$PROFILE" approvals.smart_policy)" ]]; then
     hcfg approvals.smart_policy "$(cat "$HARNESS_ROOT/templates/smart-policy.txt")"
   fi
 
@@ -219,7 +211,29 @@ setup_profile() {
   local sibling=()
   [[ "$SIBLING" == 1 ]] && sibling=(--sibling)
   helper pipeline --home "$HOME_P" --profile "$PROFILE" --project "$PROJECT" "${repo_args[@]}" \
-    "${sibling[@]}" --owner "$OWNER"
+    "${sibling[@]}" --owner "$OWNER" --route "$(route_name "$PROFILE")"
+}
+
+# The host gateway owns the one webhook listener (localhost only); every profile's route is
+# served on it under /p/<profile>/webhooks/<route>.
+setup_host() {
+  HOST_HOME="$(host_home)"
+  [[ -n "$HOST_HOME" ]] || HOST_HOME="$HOME/.hermes"
+  local configured_port
+  configured_port="$(host_config_get platforms.webhook.extra.port)"
+  run hhost config set platforms.webhook.enabled true
+  if [[ -z "$configured_port" ]]; then
+    [[ -n "$PORT" ]] || PORT="$(free_port)"
+    run hhost config set platforms.webhook.extra.host 127.0.0.1
+    run hhost config set platforms.webhook.extra.port "$PORT"
+  elif [[ -n "$PORT" && "$PORT" != "$configured_port" ]]; then
+    warn "the host webhook listener already uses port $configured_port; keeping it (ignoring --webhook-port $PORT)"
+  fi
+  if ! grep -qs '^WEBHOOK_SECRET=.' "$HOST_HOME/.env"; then
+    WEBHOOK_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+    export WEBHOOK_SECRET
+    helper env --home "$HOST_HOME" WEBHOOK_SECRET
+  fi
 }
 
 setup_route() {
@@ -227,7 +241,7 @@ setup_route() {
   prompt="$(PROJECT="$PROJECT" python3 -c 'import os, sys
 print(open(sys.argv[1]).read().replace("{{PROJECT}}", os.environ["PROJECT"]), end="")' \
     "$HARNESS_ROOT/templates/webhook-prompt.txt")"
-  run hermes -p "$PROFILE" webhook subscribe "$ROUTE" \
+  run hhost webhook subscribe "$(route_name "$PROFILE")" --route-profile "$PROFILE" \
     --description "Herdr lifecycle controller for $PROJECT" --events test \
     --skills harness-controller --script herdr_workflow_context.py \
     --deliver telegram --deliver-chat-id "$OWNER" --prompt "$prompt"
@@ -237,8 +251,9 @@ render_unit() { # render_unit TEMPLATE OUT
   local user_line="" wanted="default.target" tmp
   if is_root; then user_line="User=root"; wanted="multi-user.target"; fi
   tmp="$(mktemp)"
-  sed -e "s|@PROFILE@|$PROFILE|g" -e "s|@GATEWAY_UNIT@|$(gateway_unit "$PROFILE")|g" \
-      -e "s|@USER_LINE@|$user_line|g" -e "s|@HOME@|$HOME|g" -e "s|@HERMES_HOME@|$HOME_P|g" \
+  sed -e "s|@PROFILE@|$PROFILE|g" -e "s|@GATEWAY_UNIT@|$GATEWAY_UNIT|g" \
+      -e "s|@USER_LINE@|$user_line|g" -e "s|@HOME@|$HOME|g" \
+      -e "s|@HOST_HOME@|$HOST_HOME|g" -e "s|@PROFILE_HOME@|$HOME_P|g" \
       -e "s|@PATH@|$(dirname "$(command -v hermes)"):$(dirname "$(command -v herdr)"):$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin|g" \
       -e "s|@PYTHON@|$(command -v python3)|g" -e "s|@ROOT@|$HARNESS_ROOT|g" -e "s|@SOCKET@|$(herdr_socket)|g" \
       -e "s|@HERMES_BIN@|$(command -v hermes)|g" -e "s|@HERDR_BIN@|$(command -v herdr)|g" \
@@ -250,10 +265,15 @@ render_unit() { # render_unit TEMPLATE OUT
 
 setup_services() {
   [[ "$NO_SERVICES" == 1 ]] && { log "skipping systemd services (--no-services)"; return 0; }
-  if is_root; then
-    run hermes -p "$PROFILE" gateway install --system --run-as-user root --start-now
+  # One host gateway serves every profile: install it once, otherwise restart it so it picks up
+  # this profile, its plugins and its bot token.
+  if sysctl cat "$GATEWAY_UNIT" >/dev/null 2>&1; then
+    warn "restarting the host gateway: sessions of other profiles running right now are interrupted"
+    run hhost gateway restart
+  elif is_root; then
+    run hhost gateway install --system --run-as-user root --start-now
   else
-    run hermes -p "$PROFILE" gateway install --start-now --start-on-login
+    run hhost gateway install --start-now --start-on-login
   fi
   local units=("$(bridge_unit "$PROFILE")")
   render_unit "$HARNESS_ROOT/templates/systemd/harness-bridge.service.in" "$(unit_dir)/$(bridge_unit "$PROFILE")"
@@ -278,6 +298,8 @@ setup_repos() {
     if [[ ! -d "$repo" ]]; then warn "repo $repo does not exist yet; skipping its OpenSpec setup"; continue; fi
     if [[ -d "$repo/openspec" ]]; then
       log "OpenSpec already initialized in $repo"
+    elif ! have openspec; then
+      warn "openspec is not installed; later run: openspec init --tools claude $repo"
     else
       run openspec init --tools claude --no-animation "$repo"
     fi
@@ -287,7 +309,11 @@ setup_repos() {
     fi
   done
   if [[ "$NO_AGENT_SETUP" != 1 ]]; then
-    run lean-ctx wrap claude </dev/null || warn "lean-ctx wrap claude failed; run it yourself later"
+    if have lean-ctx; then
+      run lean-ctx wrap claude </dev/null || warn "lean-ctx wrap claude failed; run it yourself later"
+    else
+      warn "lean-ctx is not installed; later run: lean-ctx wrap claude"
+    fi
   fi
 }
 
@@ -314,6 +340,7 @@ main() {
   install_deps
   have hermes || [[ "$DRY_RUN" == 1 ]] || die "hermes is not installed (drop --skip-deps)"
   setup_profile
+  setup_host
   setup_route
   setup_services
   setup_repos
