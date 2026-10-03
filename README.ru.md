@@ -33,7 +33,8 @@
   [@userinfobot](https://t.me/userinfobot)).
 - Подписка Claude или API-ключ для Claude Code.
 - LLM-провайдер для Hermes: OpenRouter, Anthropic, OpenAI, Nous Portal и т. п.
-- python3 ≥ 3.11, git, curl; Node.js ≥ 20 + npm (для OpenSpec).
+- python3 ≥ 3.11, git, curl; Node.js ≥ 20 + npm (для OpenSpec); `libatomic1` (в минимальных образах
+  Ubuntu её нет: `sudo apt-get install -y libatomic1`).
 
 ## Быстрый старт
 

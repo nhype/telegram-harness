@@ -24,11 +24,13 @@ check() { # check NAME HINT CMD...
   if "$@" >/dev/null 2>&1; then ok "$name"; else bad "$name" "$hint"; fi
 }
 
-route_registered() { hhost webhook list 2>/dev/null | grep -q "$(route_name "$1")"; }
-bridge_subscribed() { journal "$(bridge_unit "$1")" -n 300 -o cat --no-pager 2>/dev/null | grep -q "subscribed project="; }
+# Pipelines end in `grep >/dev/null`, never `grep -q`: under pipefail an early-exiting grep
+# breaks the producer's pipe and the check fails although the text is there.
+route_registered() { hhost webhook list 2>/dev/null | grep "$(route_name "$1")" >/dev/null; }
+bridge_subscribed() { journal "$(bridge_unit "$1")" -n 300 -o cat --no-pager 2>/dev/null | grep "subscribed project=" >/dev/null; }
 webhook_answers() { # a payload naming no registered task: the route script ignores it, no agent runs
   hhost webhook test "$(route_name "$1")" --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1 |
-    grep -q "Response (200)"
+    grep "Response (200)" >/dev/null
 }
 
 doctor() {

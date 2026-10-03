@@ -32,7 +32,8 @@ archive) and messages you only when it needs a decision or has a result.
   (ask [@userinfobot](https://t.me/userinfobot)).
 - A Claude subscription or API key for Claude Code.
 - An LLM provider for Hermes (OpenRouter, Anthropic, OpenAI, Nous Portal, …).
-- python3 ≥ 3.11, git, curl; Node.js ≥ 20 + npm (for OpenSpec).
+- python3 ≥ 3.11, git, curl; Node.js ≥ 20 + npm (for OpenSpec); `libatomic1` (minimal Ubuntu images
+  lack it: `sudo apt-get install -y libatomic1`).
 
 ## Quick start
 

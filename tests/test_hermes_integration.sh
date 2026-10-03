@@ -16,7 +16,7 @@ step() { printf '\n--- %s\n' "$*"; }
 
 step "system packages"
 apt-get update -qq >/dev/null
-apt-get install -y -qq curl git python3 ca-certificates xz-utils procps >/dev/null
+apt-get install -y -qq curl git python3 ca-certificates xz-utils procps libatomic1 >/dev/null
 
 step "Hermes Agent (official installer, no setup wizard)"
 curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh |
@@ -31,7 +31,9 @@ TELEGRAM_BOT_TOKEN="000000000:$(printf 'A%.0s' $(seq 35))" ./install.sh --yes --
   --no-agent-setup --project Acme --repo /srv/acme --owner-id 111111111 --webhook-port 8650
 P="$HOME/.hermes/profiles/acme"
 [[ -f "$P/herdr-pipeline.json" ]] || fail "no pipeline config"
-hermes webhook list | grep -q herdr-acme || fail "route not registered on the host gateway"
+hermes webhook list | grep herdr-acme >/dev/null || fail "route not registered on the host gateway"
+{ "$ROOT/bin/harness" doctor acme --no-services || true; } | grep "OK    webhook route herdr-acme" >/dev/null ||
+  fail "doctor does not see the route"
 
 step "host gateway"
 hermes gateway run >/tmp/gateway.log 2>&1 &

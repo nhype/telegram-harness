@@ -123,6 +123,10 @@ preflight() {
   have git || die "git is required"
   have curl || die "curl is required"
   if [[ "$NO_SERVICES" != 1 ]]; then have systemctl || die "systemd is required (or pass --no-services)"; fi
+  # Hermes's bundled Node.js links libatomic, which minimal Ubuntu/Debian images lack.
+  if [[ "$SKIP_DEPS" != 1 ]] && ! have hermes && have ldconfig && ! ldconfig -p | grep 'libatomic\.so\.1' >/dev/null; then
+    die "Hermes Agent needs libatomic1: sudo apt-get install -y libatomic1 (then re-run)"
+  fi
   if [[ "$SKIP_DEPS" != 1 ]] && ! have openspec; then
     have npm || die "npm (Node.js 20+) is required to install OpenSpec"
     node -e 'process.exit(parseInt(process.versions.node) < 20 ? 1 : 0)' || die "Node.js 20+ is required"
@@ -287,7 +291,7 @@ setup_services() {
   fi
   run sysctl daemon-reload
   run sysctl enable --now "${units[@]}"
-  if ! is_root && have loginctl && loginctl show-user "$USER" -p Linger 2>/dev/null | grep -q '=no'; then
+  if ! is_root && have loginctl && loginctl show-user "$USER" -p Linger 2>/dev/null | grep '=no' >/dev/null; then
     warn "user services stop when you log out; run once: sudo loginctl enable-linger $USER"
   fi
 }

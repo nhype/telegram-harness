@@ -49,6 +49,9 @@ grep -q "^hermes config set platforms.webhook.extra.port 8699$" "$STUB_LOG" || f
 grep -q "^hermes -p acme config set platforms.webhook" "$STUB_LOG" && fail "webhook listener configured on the profile, not the host"
 grep -q "tools enable file herdr skills terminal --platform webhook" "$STUB_LOG" || fail "webhook toolsets not enabled"
 grep -q "lean-ctx wrap" "$STUB_LOG" && fail "--no-agent-setup still wrapped claude"
+doctor="$("$ROOT/bin/harness" doctor acme --no-services 2>&1 || true)"
+grep -q "OK    webhook route herdr-acme" <<<"$doctor" || fail "doctor does not see the route: $(grep route <<<"$doctor")"
+grep -q "OK    herdr-pipeline.json" <<<"$doctor" || fail "doctor rejects the pipeline config"
 
 # 3. Rerun converges and keeps user edits.
 echo "my project notes" >> "$P/skills/harness-controller/SKILL.md"

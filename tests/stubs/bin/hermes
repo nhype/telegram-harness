@@ -11,7 +11,9 @@ case "${1:-} ${2:-}" in
   "config path")
     if [[ -d "$home" ]]; then echo "$home/config.yaml"; else echo "Error: Profile does not exist."; fi ;;
   "config get") echo "Config key not set: $3"; exit 1 ;;
-  "webhook list") grep -o "webhook subscribe herdr-[a-z0-9]*" "$STUB_LOG" | sed 's/webhook subscribe //' | sort -u ;;
+  "webhook list")  # like the real CLI: route names first, then plenty of detail lines
+    grep -o "webhook subscribe herdr-[a-z0-9]*" "$STUB_LOG" | sed 's/webhook subscribe //' | sort -u
+    for i in $(seq 20000); do echo "    detail line $i"; done ;;
   "webhook test") echo 'Response (200): {"status": "ignored"}' ;;
   "--version "*) echo "Hermes Agent (stub)" ;;
   *) : ;;
