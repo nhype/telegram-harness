@@ -1,0 +1,16 @@
+[Unit]
+Description=telegram-harness bridge: Herdr events -> Hermes (@PROFILE@)
+After=network-online.target @GATEWAY_UNIT@
+
+[Service]
+Type=simple
+@USER_LINE@
+Environment=HOME=@HOME@
+Environment=HERMES_HOME=@HERMES_HOME@
+Environment=PATH=@PATH@
+ExecStart=@PYTHON@ @ROOT@/harness/scripts/herdr_event_bridge.py --config @HERMES_HOME@/herdr-pipeline.json --registry @HERMES_HOME@/state/herdr_tasks.json --state @HERMES_HOME@/state/herdr_event_bridge_state.json --socket @SOCKET@ --hermes-bin @HERMES_BIN@ --herdr-bin @HERDR_BIN@ --session default
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=@WANTED_BY@

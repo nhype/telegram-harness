@@ -1,0 +1,14 @@
+[Unit]
+Description=Herdr server (telegram-harness)
+After=network-online.target
+
+[Service]
+Type=simple
+@USER_LINE@
+Environment=HOME=@HOME@
+ExecStart=@HERDR_BIN@ server
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=@WANTED_BY@
