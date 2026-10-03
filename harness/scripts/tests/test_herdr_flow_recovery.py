@@ -1,6 +1,8 @@
 """Real normalization/transition/route/transport seam; no live webhook or agent writes."""
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +21,34 @@ route.CONFIG = TG_CONFIG
 # environment; on a machine without Hermes these parametrized cases simply do not exist.
 PROFILES_DIR = Path(os.environ.get('HERMES_PROFILES_DIR', os.path.expanduser('~/.hermes/profiles')))
 DEPLOYED = sorted(PROFILES_DIR.glob('*/herdr-pipeline.json'))
-HERMES_PYTHON = Path(os.environ.get('HERMES_PYTHON', os.path.expanduser('~/.hermes/hermes-agent/venv/bin/python')))
+HERMES_PYTHON = os.environ.get('HERMES_PYTHON', '')
+
+
+def hermes_runtime():
+    """(argv prefix, code prelude) that runs Python inside the installed Hermes, or (None, '').
+
+    Current Hermes names its runtime with `hermes --print-runtime-command`; older installs had a
+    virtualenv. HERMES_PYTHON overrides both.
+    """
+    if HERMES_PYTHON:
+        return [HERMES_PYTHON], ''
+    hermes = shutil.which('hermes')
+    if hermes:
+        try:
+            cmd = json.loads(subprocess.run([hermes, '--print-runtime-command'], capture_output=True,
+                                            text=True, timeout=60).stdout)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            cmd = None
+        agent = re.search(r"sys\.path\.insert\(0, '([^']+)'\)", ' '.join(cmd)) if cmd else None
+        if agent:
+            prelude = ('import os, sys\n'
+                       f'sys.path.insert(0, {agent.group(1)!r})\n'
+                       "os.environ['HERMES_HOME'] = os.environ.get('HERMES_HOME') or "
+                       "str(__import__('hermes_constants').get_default_hermes_root())\n"
+                       'import hermes_bootstrap\n')
+            return [cmd[0], '-I'], prelude
+    venv = Path(os.path.expanduser('~/.hermes/hermes-agent/venv/bin/python'))
+    return ([str(venv)], '') if venv.is_file() else (None, '')
 
 
 def registry_fixture():
@@ -206,9 +235,9 @@ def test_native_registry_recovery_and_webhook_toolset_resolution(tmp_path, pipel
     """
     config = bridge.load_pipeline_config(pipeline)
     assert config is not None, f'invalid {pipeline}'
-    python = HERMES_PYTHON
-    if not python.is_file() or not Path(config['cwd_prefixes'][0]).is_dir():
-        pytest.skip('needs the Hermes host: HERMES_PYTHON and the profile repo must exist')
+    runtime, prelude = hermes_runtime()
+    if runtime is None or not Path(config['cwd_prefixes'][0]).is_dir():
+        pytest.skip('needs the Hermes host: an installed Hermes and the profile repo')
     home, path, registry, _, _, _ = prepare(tmp_path)
     probe = r'''
 import json, sys, yaml
@@ -236,9 +265,11 @@ assert parsed['tasks'][0]['brief'].endswith('other gates CLOSED')
 assert parsed['tasks'][0]['policy']['allow_sync_archive'] is False
 print(json.dumps({'native_registry_read': True, 'toolsets': sorted(actual_tools)}))
 '''
-    proc = subprocess.run([str(python), '-c', probe, str(path), str(pipeline.parent / 'config.yaml')],
+    proc = subprocess.run([*runtime, '-c', prelude + probe, str(path), str(pipeline.parent / 'config.yaml')],
                           cwd=json.loads(pipeline.read_text())['cwd_prefixes'][0], text=True,
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                          # other suites point HERMES_HOME at a scratch home; the probe needs the real one
+                          env={k: v for k, v in os.environ.items() if k != 'HERMES_HOME'},
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=180)  # a cold runtime start can be slow
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)['native_registry_read'] is True
 
