@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pytest
+      - name: tests (bridge, registry, helper, plugins without Hermes, leak guard)
+        run: python -m pytest -q tests harness/scripts/tests harness/tools/tests harness/plugins
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get install -y shellcheck
+      - run: shellcheck -x install.sh bin/harness lib/common.sh tests/*.sh tests/stubs/bin/* tests/stubs/services/*
+      - name: installer against stub CLIs
+        run: bash tests/test_install.sh --inner
