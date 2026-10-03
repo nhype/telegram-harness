@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Test stub for the Hermes CLI: records argv and emulates the few commands install.sh reads.
+set -u
+echo "hermes $*" >> "${STUB_LOG:?STUB_LOG must be set}"
+profile=default
+if [[ "${1:-}" == "-p" ]]; then profile="$2"; shift 2; fi
+case "${1:-} ${2:-}" in
+  "profile show") [[ -d "${FAKE_HOME:?}/profiles/$3" ]] ;;
+  "profile create") mkdir -p "$FAKE_HOME/profiles/$3/plugins" ;;
+  "config path")
+    if [[ -d "$FAKE_HOME/profiles/$profile" ]]; then echo "$FAKE_HOME/profiles/$profile/config.yaml"
+    else echo "Error: Profile '$profile' does not exist."; fi ;;
+  "config get") echo "Config key not set: $3"; exit 1 ;;
+  "webhook list") grep -q "webhook subscribe herdr-agent-events" "$STUB_LOG" && echo "herdr-agent-events" ;;
+  "webhook test") echo 'Response (200): {"status": "ignored"}' ;;
+  "--version "*) echo "Hermes Agent (stub)" ;;
+  *) : ;;
+esac

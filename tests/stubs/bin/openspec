@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Test stub: records argv.
+echo "openspec $*" >> "${STUB_LOG:?}"
+if [[ "${1:-}" == "init" ]]; then last="${*: -1}"; mkdir -p "$last/openspec"; fi
+[[ "${1:-}" == "--version" ]] && echo "openspec (stub)"
+exit 0

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Test stub: records argv.
+echo "lean-ctx $*" >> "${STUB_LOG:?}"
+[[ "${1:-}" == "--version" ]] && echo "lean-ctx (stub)"
+exit 0

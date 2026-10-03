@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Test stub: records argv.
+echo "claude $*" >> "${STUB_LOG:?}"
+[[ "${1:-}" == "--version" ]] && echo "claude (stub)"
+exit 0
