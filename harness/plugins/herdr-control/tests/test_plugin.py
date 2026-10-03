@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -90,6 +91,9 @@ def test_relative_or_missing_cwd_is_rejected() -> None:
 
 
 def test_live_status_read_only() -> None:
+    socket = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "herdr" / "herdr.sock"
+    if not module._available() or not socket.exists():
+        pytest.skip("needs a running Herdr server")
     result = decode(module.inspect({"action": "status", "session": "default"}))
     assert result["success"] is True
     assert result["exit_code"] == 0

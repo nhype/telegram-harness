@@ -14,7 +14,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 export HOME="$WORK/home" FAKE_HOME="$WORK/home/.hermes" STUB_LOG="$WORK/stub.log"
 export PATH="$ROOT/tests/stubs/bin:$PATH" TELEGRAM_BOT_TOKEN="123:secret-token-value"
-unset HERMES_HOME
+unset HERMES_HOME XDG_CONFIG_HOME  # CI runners set XDG_CONFIG_HOME; the test owns its HOME
 mkdir -p "$FAKE_HOME" "$WORK/repo"
 : > "$STUB_LOG"
 ARGS=(--yes --skip-deps --no-services --no-agent-setup --project Acme --repo "$WORK/repo" --owner-id 111111111 --webhook-port 8699)

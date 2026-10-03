@@ -14,8 +14,8 @@ jobs:
       matrix:
         python: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - run: pip install pytest
@@ -25,7 +25,7 @@ jobs:
   shell:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
       - run: shellcheck -x install.sh bin/harness lib/common.sh tests/*.sh tests/stubs/bin/* tests/stubs/services/*
       - name: installer against stub CLIs
