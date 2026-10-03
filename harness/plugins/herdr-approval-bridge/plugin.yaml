@@ -1,0 +1,4 @@
+name: herdr-approval-bridge
+version: "1.0.0"
+description: "Profile-scoped authenticated Herdr webhook to Telegram request-ID-bound typed approval bridge (routing from herdr-pipeline.json)."
+author: telegram-harness

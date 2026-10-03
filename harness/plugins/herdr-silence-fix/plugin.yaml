@@ -1,0 +1,4 @@
+name: herdr-silence-fix
+version: "1.0.0"
+description: "Profile-scoped compatibility fix: classify Herdr webhook turns as machinery for silence delivery without bypassing authorization."
+author: telegram-harness
