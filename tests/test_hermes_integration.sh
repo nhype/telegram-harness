@@ -101,6 +101,8 @@ rc=0
 python3 /tmp/deliver.py "$P/state/herdr_tasks.json" || rc=$?
 [[ $rc == 1 ]] && fail "the bridge event was not accepted"
 [[ $rc == 2 ]] && fail "the controller session was never closed in the profile's state.db"
+grep -q "silence marker rejected" /tmp/gateway.log &&
+  fail "the controller's [SILENT] was treated as a user turn (it would be sent to Telegram)"
 
 echo
 echo "hermes integration: OK"
