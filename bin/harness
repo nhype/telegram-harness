@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# telegram-harness helper CLI: doctor | status | uninstall-services <profile>
+set -euo pipefail
+# shellcheck source=lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
+export PATH="$HOME/.local/bin:$PATH"
+
+usage() {
+  cat <<'EOF'
+Usage: bin/harness <command> <profile> [--no-services]
+
+  doctor               check every piece of the installation (exit 1 if anything fails)
+  status               services, tasks and the last bridge log lines
+  uninstall-services   stop and remove the bridge and gateway services (profile data is kept)
+EOF
+}
+
+FAILED=0
+ok() { printf 'OK    %s\n' "$1"; }
+bad() { printf 'FAIL  %s — %s\n' "$1" "$2"; FAILED=1; }
+skip() { printf 'SKIP  %s (%s)\n' "$1" "$2"; }
+check() { # check NAME HINT CMD...
+  local name="$1" hint="$2"; shift 2
+  if "$@" >/dev/null 2>&1; then ok "$name"; else bad "$name" "$hint"; fi
+}
+
+route_registered() { hermes -p "$1" webhook list 2>/dev/null | grep -q "$ROUTE"; }
+bridge_subscribed() { journal "$(bridge_unit "$1")" -n 300 -o cat --no-pager 2>/dev/null | grep -q "subscribed project="; }
+webhook_answers() {
+  hermes -p "$1" webhook test "$ROUTE" --payload '{"event_id":"doctor","task":{"id":"doctor"}}' 2>&1 |
+    grep -q "Response (200)"
+}
+
+doctor() {
+  local profile="$1" no_services="$2" bin home
+  for bin in herdr hermes claude openspec lean-ctx; do
+    if have "$bin"; then ok "$bin $("$bin" --version 2>/dev/null | head -1)"; else bad "$bin" "install it (see README)"; fi
+  done
+  have hermes || { echo "hermes is missing; nothing else can be checked"; return 1; }
+  home="$(profile_home "$profile")"
+  if [[ -z "$home" ]]; then bad "profile $profile" "run ./install.sh"; return 1; fi
+  ok "profile $profile ($home)"
+  check "herdr-pipeline.json" "re-run ./install.sh --profile $profile" \
+    python3 "$HARNESS_ROOT/harness/tools/harness_setup.py" check-pipeline --home "$home"
+  local plugin
+  for plugin in "${PLUGINS[@]}"; do
+    check "plugin $plugin" "re-run ./install.sh --profile $profile" test -f "$home/plugins/$plugin/__init__.py"
+  done
+  check "skill harness-controller" "re-run ./install.sh --profile $profile" test -f "$home/skills/harness-controller/SKILL.md"
+  check "webhook route $ROUTE" "re-run ./install.sh --profile $profile" route_registered "$profile"
+  if [[ "$no_services" == 1 ]]; then
+    skip "services, herdr socket, live webhook" "--no-services"
+  else
+    check "gateway service" "$(sysctl_name) status $(gateway_unit "$profile")" sysctl is-active --quiet "$(gateway_unit "$profile")"
+    check "bridge service" "$(sysctl_name) status $(bridge_unit "$profile")" sysctl is-active --quiet "$(bridge_unit "$profile")"
+    check "herdr socket $(herdr_socket)" "start it: herdr server (or enable herdr-server.service)" test -S "$(herdr_socket)"
+    check "bridge subscribed to Herdr" "see: bin/harness status $profile" bridge_subscribed "$profile"
+    check "webhook answers" "is the gateway running and the model configured? (hermes -p $profile model)" webhook_answers "$profile"
+  fi
+  return "$FAILED"
+}
+
+sysctl_name() { if is_root; then echo systemctl; else echo "systemctl --user"; fi; }
+
+status() {
+  local profile="$1" home
+  sysctl --no-pager status "$(gateway_unit "$profile")" "$(bridge_unit "$profile")" 2>/dev/null | grep -E '●|Active:' || true
+  home="$(profile_home "$profile")"
+  if [[ -n "$home" ]]; then
+    python3 "$HARNESS_ROOT/harness/scripts/herdr_registry.py" --registry "$home/state/herdr_tasks.json" list 2>/dev/null || true
+  fi
+  journal "$(bridge_unit "$profile")" -n 10 -o cat --no-pager 2>/dev/null || true
+}
+
+uninstall_services() {
+  local profile="$1" unit
+  unit="$(bridge_unit "$profile")"
+  run sysctl disable --now "$unit" || true
+  run rm -f "$(unit_dir)/$unit"
+  run sysctl daemon-reload
+  if is_root; then run hermes -p "$profile" gateway uninstall --system || true
+  else run hermes -p "$profile" gateway uninstall || true; fi
+  log "services removed; profile data kept (delete it with: hermes profile delete $profile)"
+}
+
+main() {
+  local cmd="${1:-}" profile="${2:-}" no_services=0
+  [[ "${3:-}" == "--no-services" ]] && no_services=1
+  if [[ -z "$cmd" || -z "$profile" || "$cmd" == -h || "$cmd" == --help ]]; then usage; exit 2; fi
+  case "$cmd" in
+    doctor) doctor "$profile" "$no_services" ;;
+    status) status "$profile" ;;
+    uninstall-services) uninstall_services "$profile" ;;
+    *) usage; exit 2 ;;
+  esac
+}
+
+main "$@"

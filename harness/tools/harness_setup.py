@@ -80,6 +80,13 @@ def cmd_pipeline(home: Path, profile: str, project: str, repos: list[str], sibli
     return f"pipeline: wrote {path}"
 
 
+def cmd_check_pipeline(home: Path) -> str:
+    data = load_pipeline_config(home / PIPELINE_CONFIG)
+    if data is None:
+        raise Refused(f"missing or invalid {home / PIPELINE_CONFIG}")
+    return f"pipeline: project={data['project']} repos={','.join(data['cwd_prefixes'])} route={data['route']}"
+
+
 def _render(text: str, values: dict[str, str]) -> str:
     missing = sorted({m for m in PLACEHOLDER.findall(text) if m not in values})
     if missing:
@@ -129,6 +136,8 @@ def main(argv: list[str] | None = None) -> int:
     pipe.add_argument("--repo", action="append", default=[])
     pipe.add_argument("--sibling", action="store_true")
     pipe.add_argument("--route", default="herdr-agent-events")
+    check = sub.add_parser("check-pipeline", help="validate <home>/herdr-pipeline.json")
+    check.add_argument("--home", required=True)
     skills = sub.add_parser("skills", help="render skills into <home>/skills")
     skills.add_argument("--home", required=True)
     skills.add_argument("--src", required=True)
@@ -140,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
             print(cmd_env(home, args.keys, args.force))
         elif args.cmd == "pipeline":
             print(cmd_pipeline(home, args.profile, args.project, args.repo, args.sibling, args.owner, args.route))
+        elif args.cmd == "check-pipeline":
+            print(cmd_check_pipeline(home))
         else:
             values = dict(v.split("=", 1) for v in args.var if "=" in v)
             print(cmd_skills(home, Path(args.src), values))

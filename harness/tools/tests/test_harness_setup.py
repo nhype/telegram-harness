@@ -56,6 +56,16 @@ def test_pipeline_refuses_relative_repo_and_bad_owner(tmp_path):
     assert not (tmp_path / "herdr-pipeline.json").exists()
 
 
+def test_check_pipeline_reports_valid_and_invalid(tmp_path):
+    assert run("check-pipeline", "--home", str(tmp_path)).returncode == 2
+    run("pipeline", "--home", str(tmp_path), "--profile", "acme", "--project", "Acme",
+        "--repo", "/srv/acme", "--owner", "111111111")
+    ok = run("check-pipeline", "--home", str(tmp_path))
+    assert ok.returncode == 0 and "Acme" in ok.stdout
+    (tmp_path / "herdr-pipeline.json").write_text("{}")
+    assert run("check-pipeline", "--home", str(tmp_path)).returncode == 2
+
+
 def test_skills_render_then_keep_user_edits(tmp_path):
     src = tmp_path / "src" / "harness-controller"
     src.mkdir(parents=True)
