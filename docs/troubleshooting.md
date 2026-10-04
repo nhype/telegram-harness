@@ -14,6 +14,8 @@ services a minute: `bin/harness doctor <profile> --wait 60`.
 | An agent sits idle and nobody reacts | a wait without a real end, or a question that never reached you | `bin/harness status <profile>`; ask the bot "status?" — it fixes stalls it finds and notes the cause |
 | The bot asks you to `/login` | an agent's Claude Code session expired | open the pane (`herdr`), run `/login`, then tell the bot "done" |
 | Approval prompt timed out at night | a controller command was not on the read-only list | add the command pattern to the smart policy (`hermes -p <profile> config set approvals.smart_policy …`) |
+| Alert "agent events are not reaching Hermes" | the bridge cannot run `hermes webhook test` (gateway down, route missing, Hermes runtime not writable for the bridge) | `bin/harness doctor <profile>`; `journalctl -u harness-bridge-<profile>` shows the exact error |
+| Alert "task … has been stuck" | the agent waits on something the controller could not resolve (a menu, a question, an error) | look at the pane (`herdr`), or ask the bot "status?" |
 | After `hermes update` plugins misbehave | Hermes internals changed | `bin/harness test-plugins`; update this repo (`git pull && ./install.sh --profile <profile>`) |
 | After `hermes update` the bridge log shows `Connection refused` | the update moved per-profile gateways onto the host gateway (older setups) and their old webhook ports are gone | `./install.sh --profile <profile>`: it registers the route on the host gateway and rewrites the bridge unit |
 

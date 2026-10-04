@@ -822,6 +822,33 @@ class DeliveryResult(NamedTuple):
     detail: str = ""
 
 
+def send_owner_alert(env_path: str, chat_id: str, text: str, timeout: float = 15.0) -> bool:
+    """Message the owner through the profile's Telegram bot directly (not through Hermes,
+    which may be the thing that is broken). The token is read from the profile's .env and never logged."""
+    import urllib.parse
+    import urllib.request
+    token = ""
+    try:
+        for line in Path(env_path).read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.partition("=")
+            if sep and key.strip() == "TELEGRAM_BOT_TOKEN":
+                token = value.strip().strip('"').strip("'")
+    except OSError as exc:
+        log(f"alert skipped: cannot read bot token ({type(exc).__name__})")
+        return False
+    if not token or not chat_id:
+        log("alert skipped: no bot token or chat")
+        return False
+    data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode()
+    try:
+        with urllib.request.urlopen(f"https://api.telegram.org/bot{token}/sendMessage", data=data,
+                                    timeout=timeout) as response:
+            return 200 <= response.status < 300
+    except Exception as exc:  # noqa: BLE001 - an alert must never take the bridge down
+        log(f"alert failed: {type(exc).__name__}")
+        return False
+
+
 def deliver_payload(hermes_bin: str, webhook: str, payload: dict[str, Any], timeout: int) -> DeliveryResult:
     """Run ``hermes webhook test`` once with a bounded timeout and classify the reply."""
     command = [hermes_bin, "webhook", "test", webhook, "--payload", json.dumps(payload, ensure_ascii=False)]
@@ -1018,6 +1045,10 @@ class BridgeConfig:
         "db_poll_seconds": 5.0,
         "inflight_no_row_seconds": 180.0,
         "inflight_max_seconds": 1800.0,
+        "alert_chat": "",
+        "alert_env": "",
+        "alert_transport_interval": 3600.0,
+        "stall_alert_seconds": 5400.0,
         "topology_min_interval": 5.0,
         "pane_refresh_seconds": 60.0,
     }
@@ -1052,6 +1083,8 @@ class BridgeConfig:
             session=args.session,
             project=args.project,
             profile=getattr(args, "profile", "") or "",
+            alert_chat=getattr(args, "alert_chat", "") or "",
+            alert_env=getattr(args, "alert_env", "") or "",
             cwd_prefix=list(args.cwd_prefix or []),
             sibling_prefix=bool(args.sibling_prefix),
             webhook_timeout=args.webhook_timeout,
@@ -1121,8 +1154,14 @@ class Bridge:
         deliver: Callable[[dict[str, Any]], DeliveryResult] | None = None,
         threaded: bool = True,
         clock: Callable[[], float] = time.time,
+        alert: Callable[[str], Any] | None = None,
     ) -> None:
         self.cfg = cfg
+        if alert is None and cfg.alert_chat and cfg.alert_env:
+            def alert(text: str) -> None:  # off the event loop: Telegram may be slow
+                threading.Thread(target=send_owner_alert, args=(cfg.alert_env, cfg.alert_chat, text),
+                                 daemon=True).start()
+        self._alert_sink = alert or (lambda text: None)
         self._list_panes = list_panes or (lambda: list_herdr_panes(cfg.herdr_bin, cfg.session))
         self._read_pane = read_pane or (lambda pane_id: read_pane_tail(cfg.herdr_bin, cfg.session, pane_id))
         self._agent_get = agent_get or (lambda pane_id: herdr_agent_info(cfg.herdr_bin, cfg.session, pane_id))
@@ -1681,6 +1720,9 @@ class Bridge:
         if attempts > len(RETRY_BACKOFF):
             log(f"ERROR dropped task={task_id} event={entry['event_id']} reason=transport "
                 f"attempts={attempts} detail={_short(result.detail)}")
+            self.alert_owner("transport", f"⚠️ {self.cfg.project}: agent events are not reaching Hermes ({_short(result.detail)}). "
+                f"Tasks wait until delivery recovers: bin/harness status {self.cfg.profile}",
+                now, self.cfg.alert_transport_interval)
             return
         delay = RETRY_BACKOFF[attempts - 1]
         retry = dict(entry, attempts=attempts, next_at=now + delay)
@@ -1751,6 +1793,19 @@ class Bridge:
         log(f"controller ended workflow={workflow} event={inflight.get('event_id')} how={how} "
             f"ran={int(now - float(inflight.get('since') or now))}s deferred={deferred}")
 
+    def alert_owner(self, key: str, text: str, now: float, min_interval: float) -> None:
+        """Send one owner alert per key and interval (the times persist in the state file)."""
+        sent = self.state.setdefault("alerts", {})
+        if now - float(sent.get(key) or float("-inf")) < min_interval:
+            return
+        sent[key] = now
+        if len(sent) > 200:  # keep the state file small
+            for old in sorted(sent, key=sent.get)[:-200]:
+                del sent[old]
+        self.dirty = True
+        log(f"alert key={key}")
+        self._alert_sink(text)
+
     # -- watchdog ---------------------------------------------------------------------
 
     def _watchdog(self, now: float) -> None:
@@ -1801,12 +1856,19 @@ class Bridge:
             watch["stall_count"] = 0
             self.dirty = True
         count = int(watch.get("stall_count") or 0)
-        if count >= 2:
-            return
         start = float(pane.get("idle_since") or pane.get("status_since") or now)
         if until is not None and until <= now:
             start = max(start, until)
         idle_for = now - start
+        if count >= 2:
+            # Two controller wakes did not move it: tell the owner once instead of going silent.
+            if idle_for >= self.cfg.stall_alert_seconds and watch.get("alerted_epoch") != epoch:
+                watch["alerted_epoch"] = epoch
+                self.dirty = True
+                self.alert_owner(f"stall:{task['id']}:{epoch}", f"⚠️ {self.cfg.project}: task {task['id']} has been stuck for {int(idle_for // 3600)} h "
+                f"{int(idle_for % 3600 // 60)} min; the controller could not move it twice. "
+                f"Pane {task['pane_id']}: look at it or ask the bot for a status.", now, 0.0)
+            return
         if idle_for < self.cfg.stall_seconds * (1 if count == 0 else 3):
             return
         watch["stall_count"] = count + 1
@@ -1942,6 +2004,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--session", default="default")
     parser.add_argument("--project", default=None)
     parser.add_argument("--profile", default=None, help="Hermes profile the route is bound to (default: from --config)")
+    parser.add_argument("--alert-chat", default=None, help="Telegram chat for owner alerts (default: chat_id from --config)")
+    parser.add_argument("--alert-env", default=None, help=".env holding TELEGRAM_BOT_TOKEN (default: next to --config)")
     parser.add_argument("--cwd-prefix", action="append", default=None)
     parser.add_argument("--sibling-prefix", action="store_true", default=None)
     parser.add_argument("--registry-poll", type=float, default=1.0,
@@ -1973,6 +2037,10 @@ def apply_pipeline_config(args: argparse.Namespace) -> argparse.Namespace:
         args.project = cfg.get("project", "")
     if getattr(args, "profile", None) is None:
         args.profile = cfg.get("profile", "")
+    if getattr(args, "alert_chat", None) is None:
+        args.alert_chat = cfg.get("chat_id", "")
+    if getattr(args, "alert_env", None) is None:
+        args.alert_env = str(Path(args.config).parent / ".env") if args.config else ""
     if args.webhook is None:
         args.webhook = cfg.get("route", "herdr-agent-events")
     if args.cwd_prefix is None:

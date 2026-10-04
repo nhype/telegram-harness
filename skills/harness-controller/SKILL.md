@@ -35,7 +35,8 @@ the task is finished, not the length of this run.
 2. ONE read of the pane: `herdr_inspect` `agent_read` (target = task pane, lines 80–150).
    Call `herdr_task get` only if you need notes/decisions/brief beyond the payload.
 3. Decide with the table below and act.
-4. Send prompts with `herdr_control agent_prompt` (wait=false). `target_busy` / `duplicate_send` mean
+4. Send prompts with `herdr_control agent_prompt` (wait=false). After any prompt or keys, `agent_get` must
+   show `working`, or the agent is still blocked: look again and finish the job in this run. `target_busy` / `duplicate_send` mean
    "already handled", not errors. Success = the returned `agent_status` is `working`; only then may you
    say "sent/started".
 5. Record the new state with ONE `herdr_task update` (phase / wait / agent_session) and, if useful,
@@ -50,7 +51,7 @@ the task is finished, not the length of this run.
 | `rate_limit` with a reset time | `herdr_task update wait={reason:"scheduled", until:<reset UTC>}`. [SILENT] |
 | `login_required` | The hint is a regex over the tail and also fires on text that merely mentions `/login`. Confirm on screen that the agent's own CLI shows a login prompt or auth error and cannot run; otherwise treat the event as its real status. If confirmed: tell the owner which pane needs `/login`, one line, `wait={reason:"user_decision", note:"needs /login in <pane>"}`. |
 | `context_limit` | `herdr_control fresh_session`, then a resume prompt pointing to the change artifacts + `handoff.md`. |
-| `menu_open` / blocked with a technical choice inside the task | Choose it (send the digit/keys). |
+| `menu_open`, a numbered menu or a question wizard | «Menus and question wizards» below: answer every page in this run, submit, require `working`. |
 | Agent asks a question answerable from brief, decisions, repo, config, logs | Answer it yourself in the pane. |
 | Agent asks for an owner decision, or its plan lists "open points for the owner" | «Owner questions» below: decide it yourself unless it is one of the four owner-only kinds. |
 | idle/done, work incomplete, no question | Send the concrete next step (template below). |
@@ -59,7 +60,7 @@ the task is finished, not the length of this run.
 | Finalize done (sync/archive pushed) | Integration into main if the task used a branch (below), then graceful exit. |
 | Reviewer pane done | Blocking findings → author pane; PASS → next phase. |
 | Author finished fixes for review | Send the reviewer a bounded re-check of ONLY those findings. |
-| `reason=stall` | Find why it is stuck from the tail and act. If it waits on the owner: a question already sent (it is in `wait.note`) → set the wait, [SILENT]; never sent → ask now («Owner questions», step 5). |
+| `reason=stall` | Read the screen (`source:"visible"`): a menu or wizard → «Menus and question wizards». On the second wake (event id ends in `:stall2`), if you cannot make the agent work, tell the owner in one line what blocks it and what you tried (the bridge alerts him later anyway). Otherwise find why it is stuck from the tail and act. If it waits on the owner: a question already sent (it is in `wait.note`) → set the wait, [SILENT]; never sent → ask now («Owner questions», step 5). |
 | `reason=wait_elapsed` and `wait.reason=user_decision` | The recheck in «Owner questions», step 6. |
 | `reason=wait_elapsed` (other) | Do the scheduled check now. |
 | `reason=working_no_output` | If the tail shows a hang: `esc`, then the resume prompt; else [SILENT]. |
@@ -75,6 +76,25 @@ the task is finished, not the length of this run.
 - Obey `task.policy` flags when a task explicitly disables something.
 - Never defer a check to "tomorrow" when a smoke can prove it now; if time must pass, set
   `wait={reason:"scheduled", until:...}` for that one assertion and keep the rest moving.
+
+## Menus and question wizards
+
+A Claude Code menu (`menu_open` hint, numbered options with `❯`) or a question wizard (a tab bar such as
+`☒ Billing  ☐ Next step  ✔ Submit`) blocks the agent until it is fully answered. An agent once sat 7 h in
+a four-page wizard: each controller run pressed one `enter`, answered one page with its default and left.
+
+1. Read the screen, not the history: `herdr_inspect {action:"agent_read", target, source:"visible", lines:80}`.
+2. Answer EVERY page in this run. For each one take the option that matches the owner policy, the brief
+   and the decisions, not simply the one marked "(Recommended)". Commit, push, deploy and smoke inside the
+   granted scope are authorized: when a page asks how far to go, take the option that goes through them.
+   A page of an owner-only kind → «Owner questions».
+3. Select with the option's digit (`agent_send_keys keys:["2"]`); the wizard moves to its next page. On the
+   last page, Submit (`enter`). A Claude Code feedback survey (`How is Claude doing… 0: Dismiss`) gets `0`.
+4. Read the screen again after every selection. The run is not done until the menu is gone and
+   `agent_get` shows `working`. If the agent is idle again, it is still waiting: continue.
+5. Record the choices in one `herdr_task decision` (by `controller`). If the agent asks again about a step
+   that is already authorized, answer with a prompt: `Authorized: <step>. Continue to the end without
+   asking again.`
 
 ## Owner questions: decide, do not block
 

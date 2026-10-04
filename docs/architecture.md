@@ -39,6 +39,10 @@
   3 h for a question to the owner (`user_decision`), 1 h for an author waiting on something external.
   On that recheck the controller applies your answer, proceeds with its recommendation when the choice is
   reversible, or reminds you once.
+- **Owner alerts.** The bridge messages the owner itself, through the profile's Telegram bot and not
+  through Hermes, in two cases: events are being lost to delivery failures (once an hour), or a task is
+  still idle 90 min after two stall wakes did not move it (once per episode). Silence then means the
+  pipeline works.
 - **Quiet waits** (`quiet: true`) hold the agent's short progress turns until `until`; they are only for
   automated runs that keep posting progress by themselves.
 

@@ -66,13 +66,14 @@ class Harness:
         self.list_calls = 0
         self.auto_end = auto_end
         self.chat_format = options.pop("chat_format", "legacy")
+        self.alerts = []
         self.delivery_seq = 0
         self.now = T0
         cfg = bridge.BridgeConfig(self.registry_path, self.state_path, self.db_path,
                                   project="ExampleApp", cwd_prefix=[CWD], **options)
         self.bridge = bridge.Bridge(cfg, list_panes=self.list_panes, read_pane=self.read_pane,
                                     agent_get=self.agent_get, deliver=self.deliver,
-                                    threaded=threaded, clock=lambda: self.now)
+                                    threaded=threaded, clock=lambda: self.now, alert=self.alerts.append)
         assert self.bridge.prepare_subscription(self.now)
         self.bridge.mark_subscribed(self.now)
 
@@ -634,6 +635,29 @@ def test_transport_failures_retry_with_bounded_backoff(tmp_path, capsys):
     assert h.bridge.state["queue"] == []
     out = capsys.readouterr().out
     assert "ERROR dropped task=a" in out and "reason=transport attempts=6" in out
+
+
+def test_owner_is_alerted_once_an_hour_when_events_are_lost_to_transport(tmp_path):
+    # After a Hermes update every delivery failed for a day and nobody knew: the bridge only logged.
+    h = Harness(tmp_path, tasks=[no_continue()])
+    h.responses = [bridge.DeliveryResult("error", "", "Error: connection refused")] * 30
+    h.status("w5:p1", "idle")
+    h.advance(1000)
+    assert len(h.alerts) == 1 and "connection refused" in h.alerts[0]
+    h.status("w5:p1", "working")
+    h.advance(30)
+    h.status("w5:p1", "idle")
+    h.advance(1000)
+    assert len(h.alerts) == 1
+
+
+def test_owner_is_alerted_once_when_a_task_stays_stalled_after_two_wakes(tmp_path, capsys):
+    # An agent stuck in a menu the controller could not finish sat 7 h in silence.
+    h = Harness(tmp_path, tasks=[reg_task("a", "w5:p1")], auto_end=True)
+    h.status("w5:p1", "idle")
+    h.advance(4 * 3600, step=30)
+    assert [p["reason"] for p in h.sent].count("stall") == 2
+    assert len(h.alerts) == 1 and "a" in h.alerts[0] and "w5:p1" in h.alerts[0]
 
 
 def test_other_tasks_are_delivered_while_one_is_backing_off(tmp_path):
