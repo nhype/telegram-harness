@@ -19,9 +19,17 @@
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
   <a href="#how-it-compares">How it compares</a> ·
-  <a href="docs/architecture.md">Architecture</a> ·
-  <a href="README.ru.md">Русский</a>
+  <a href="docs/architecture.md">Architecture</a>
 </p>
+
+<p align="center"><sub>
+  <b>English</b> ·
+  <a href="README.ru.md">Русский</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.de.md">Deutsch</a> ·
+  <a href="README.it.md">Italiano</a>
+</sub></p>
 
 <p align="center">
   <picture>
