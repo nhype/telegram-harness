@@ -24,6 +24,56 @@ archive) and messages you only when it needs a decision or has a result.
 - **OpenSpec** gives every task a plan, a checklist and an archive; **lean-ctx** keeps the agents'
   context small.
 
+## Why telegram-harness
+
+Most tools let you *chat* with a coding agent from your phone, and you still have to babysit it.
+telegram-harness gives you a **manager**: you say what you want, and it gets the change built, tested,
+deployed, verified and merged. It writes to you only when it really needs you.
+
+- **A manager, not a relay.** Between your messages a controller reads the agent's screen after every
+  step and keeps it moving. It answers technical questions from the repo and your past decisions, picks
+  menu options by your policy and recovers from API errors and full contexts.
+- **The whole lifecycle, to production.** OpenSpec plan → code → tests → deploy → live smoke → archive
+  → merge into `main`. "Done" means *live and verified*, not "code written".
+- **It asks only what is yours to decide:** money, irreversible actions, product choices, your accounts.
+  Everything else it decides and reports. A bare "yes" in the chat reaches the agent that asked.
+- **Never silently stuck.** An event-driven watchdog catches stalls, elapsed waits and hung panes. If a
+  task still does not move, the bridge messages you itself, even when Hermes is down.
+- **A second pair of eyes.** An independent reviewer agent checks the plan and the diff for money,
+  privacy, security, data-loss and concurrency risks before anything ships.
+- **Your server, your subscription.** Code and production never leave your machine, and agents run on
+  your own Claude plan. No per-task SaaS bill, no vendor VM. MIT licensed.
+- **Watch or take over at any moment.** Every agent lives in a Herdr terminal pane you can open, read
+  and type into.
+- **Lean context.** lean-ctx compresses what agents read, so long tasks fit and cost less.
+- **Built from real use.** Extracted from a setup that ships production changes every day. It has 320+
+  tests, CI, and an integration test against a real Hermes in a clean container.
+
+## How it compares
+
+| | **telegram-harness** | Telegram bots for Claude Code¹ | Mobile clients² | Local orchestrators³ | Cloud coding agents⁴ |
+|---|---|---|---|---|---|
+| Where agents run | your server | your server | your computer | your computer | vendor cloud |
+| How you drive them | Telegram, plain words | Telegram chat with a session | phone / web app | desktop TUI or board | web, IDE, Slack, GitHub |
+| Who keeps the agent going between your messages | **the controller** | you | you | you | the vendor agent |
+| Plan → code → deploy → live check → merge, built in | **yes** | no | no | no, you review and merge | usually ends at a pull request |
+| Independent reviewer agent | **yes** | no | no | no | varies |
+| Stuck tasks detected and reported | **yes** | no | notifications | no | varies |
+| Interrupts you only for real decisions | **yes** | every question | every question | every question | varies |
+| Ships to *your own* production | **yes** | by hand | by hand | by hand | rarely |
+| Cost | your Claude plan + an LLM for Hermes | your plan | your plan | your plan | per seat or usage |
+| License | MIT | mostly open source | open source | open source | proprietary |
+
+¹ e.g. claude-code-telegram, CCBot, Claude Telegram Bot Bridge. ² e.g. Happy, Omnara.
+³ e.g. Claude Squad, Vibe Kanban. ⁴ e.g. Codex cloud, Cursor background agents, GitHub Copilot coding agent, Devin.
+The columns describe each category's typical setup as of October 2026. Individual projects change fast,
+so check their docs.
+
+**When something else fits better:**
+- you want to pair-program live from your phone, line by line (a mobile client is simpler);
+- you have no Linux server, or need macOS or Docker (not supported yet);
+- your team needs shared multi-user chat (telegram-harness is built for one owner per bot).
+
 ## What you need
 
 - A Linux server with systemd (a dedicated VM or user is best: the agents run with
