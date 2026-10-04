@@ -1,7 +1,13 @@
-# telegram-harness
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="" width="96">
+</p>
+
+<h1 align="center">telegram-harness</h1>
 
 <p align="center">
-  <img src="docs/assets/hero.webp" alt="telegram-harness: your AI dev team in Telegram" width="100%">
+  <b>Your coding agents, managed from Telegram.</b><br>
+  Claude Code agents plan, build, test, deploy and verify. A manager keeps them moving<br>
+  and asks you only what is yours to decide.
 </p>
 
 <p align="center">
@@ -10,7 +16,20 @@
   <img src="https://img.shields.io/badge/platform-Linux%20%2B%20systemd-informational.svg" alt="Linux + systemd">
 </p>
 
-[English](README.md) · [Русский](README.ru.md)
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#how-it-compares">How it compares</a> ·
+  <a href="docs/architecture.md">Architecture</a> ·
+  <a href="README.ru.md">Русский</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.svg">
+    <img src="docs/assets/demo-light.svg" alt="A Telegram chat on the left: the owner asks for CSV export, the bot reports plan, implementation, deploy and live check. On the right, Herdr panes: the author agent edits, tests and deploys, the reviewer agent passes the change, and the bridge log shows no stalls." width="100%">
+  </picture>
+</p>
 
 **Run Claude Code agents from Telegram.** You write a task to your bot; Hermes Agent starts a Claude Code
 agent in a Herdr terminal pane, drives it through the OpenSpec lifecycle (plan → code → test → deploy →

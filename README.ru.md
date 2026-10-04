@@ -1,7 +1,13 @@
-# telegram-harness
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="" width="96">
+</p>
+
+<h1 align="center">telegram-harness</h1>
 
 <p align="center">
-  <img src="docs/assets/hero.webp" alt="telegram-harness: ваша команда ИИ-разработчиков в Telegram" width="100%">
+  <b>Ваши агенты-программисты под управлением из Telegram.</b><br>
+  Агенты Claude Code планируют, пишут код, тестируют, деплоят и проверяют. Менеджер не даёт им встать<br>
+  и спрашивает вас только о том, что решать вам.
 </p>
 
 <p align="center">
@@ -10,7 +16,20 @@
   <img src="https://img.shields.io/badge/platform-Linux%20%2B%20systemd-informational.svg" alt="Linux + systemd">
 </p>
 
-[English](README.md) · [Русский](README.ru.md)
+<p align="center">
+  <a href="#быстрый-старт">Быстрый старт</a> ·
+  <a href="#сравнение-с-альтернативами">Сравнение</a> ·
+  <a href="docs/architecture.md">Архитектура</a> ·
+  <a href="README.md">English</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.svg">
+    <img src="docs/assets/demo-light.svg" alt="Слева чат в Telegram: владелец просит экспорт в CSV, бот сообщает о плане, реализации, деплое и живой проверке. Справа панели Herdr: агент-автор правит код, тестирует и деплоит, агент-ревьюер пропускает изменение, в логе bridge нет простоев." width="100%">
+  </picture>
+</p>
 
 **Агенты Claude Code под управлением из Telegram.** Вы пишете задачу своему боту. Hermes Agent запускает
 агента Claude Code в терминальной панели Herdr и ведёт его по жизненному циклу OpenSpec: план → код →
