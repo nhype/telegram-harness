@@ -1,5 +1,15 @@
 # telegram-harness
 
+<p align="center">
+  <img src="docs/assets/hero.webp" alt="telegram-harness: ваша команда ИИ-разработчиков в Telegram" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/nhype/telegram-harness/actions/workflows/ci.yml"><img src="https://github.com/nhype/telegram-harness/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/platform-Linux%20%2B%20systemd-informational.svg" alt="Linux + systemd">
+</p>
+
 [English](README.md) · [Русский](README.ru.md)
 
 **Агенты Claude Code под управлением из Telegram.** Вы пишете задачу своему боту. Hermes Agent запускает
