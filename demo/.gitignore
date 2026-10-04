@@ -1,0 +1,10 @@
+# render scratch: snapshots, logs, HyperFrames caches
+.snaps-*/
+.*.log
+.*.txt
+trailer/snapshots/
+trailer/renders/
+trailer/.hyperframes/
+trailer/.media/
+trailer/node_modules/
+.raw-*.mp4

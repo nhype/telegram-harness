@@ -1,0 +1,1357 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"lang","type":"enum","label":"Language","default":"en","options":[{"value":"en","label":"English"},{"value":"ru","label":"Русский"}]}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>telegram-harness trailer</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* fonts:begin */
+@font-face {
+  font-family: 'TH Serif';
+  font-style: italic;
+  font-weight: 500;
+  font-display: block;
+  src: url("assets/fonts/THSerif-500i-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Serif';
+  font-style: italic;
+  font-weight: 500;
+  font-display: block;
+  src: url("assets/fonts/THSerif-500i-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Serif';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("assets/fonts/THSerif-500-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Serif';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("assets/fonts/THSerif-500-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Serif';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("assets/fonts/THSerif-600-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Serif';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("assets/fonts/THSerif-600-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("assets/fonts/THDisplay-500-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("assets/fonts/THDisplay-500-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("assets/fonts/THDisplay-700-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("assets/fonts/THDisplay-700-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("assets/fonts/THSans-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("assets/fonts/THSans-400-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("assets/fonts/THSans-600-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("assets/fonts/THSans-600-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("assets/fonts/THSans-700-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("assets/fonts/THSans-700-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("assets/fonts/THMono-400-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("assets/fonts/THMono-400-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'TH Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("assets/fonts/THMono-700-cyrillic.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'TH Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("assets/fonts/THMono-700-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+      /* fonts:end */
+
+      :root {
+        --bg: #06080d;
+        --fg: #eef2f8;
+        --soft: #c3cad6;
+        --muted: #8b95a7;
+        --accent: #4493f8;
+        --accent-deep: #1f6feb;
+        --green: #3fb950;
+        --card: #0f131b;
+        --card-2: #0b0e14;
+        --line: #232a36;
+        --bubble: #1a2130;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: "TH Sans", sans-serif;
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+      }
+      .wrap {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* background ------------------------------------------------------------ */
+      #bg .glow {
+        position: absolute;
+        left: 460px;
+        top: 140px;
+        width: 1000px;
+        height: 800px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(68, 147, 248, 0.13), rgba(68, 147, 248, 0) 70%);
+      }
+      #vignette {
+        background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+        z-index: 90;
+      }
+      #bars {
+        z-index: 95;
+      }
+      #bars .bar {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 138px;
+        background: #020306;
+      }
+      #bars .top {
+        top: 0;
+      }
+      #bars .bottom {
+        bottom: 0;
+      }
+
+      /* story cards ------------------------------------------------------------ */
+      .story {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        padding: 0 180px;
+        text-align: center;
+      }
+      .lead {
+        font-family: "TH Serif", serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 60px;
+        line-height: 1.15;
+        color: var(--soft);
+      }
+      .cap {
+        font-family: "TH Display", sans-serif;
+        font-weight: 700;
+        font-size: 104px;
+        line-height: 1.04;
+        letter-spacing: 0.045em;
+        text-transform: uppercase;
+        color: var(--fg);
+        max-width: 1560px;
+        text-wrap: balance;
+      }
+      .w {
+        display: inline-block;
+      }
+
+      /* scene 1 */
+      #s1 .clock {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "TH Mono", monospace;
+        font-size: 380px;
+        color: #9fb6dc;
+        letter-spacing: -0.02em;
+      }
+      #s1 .colon {
+        display: inline-block;
+      }
+
+      /* scene 2 */
+      .win {
+        position: absolute;
+        width: 520px;
+        height: 330px;
+        border-radius: 16px;
+        border: 2px solid #2b3445;
+        background: #0d121a;
+        overflow: hidden;
+      }
+      .win .head {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 18px;
+        border-bottom: 2px solid #1f2633;
+        font-family: "TH Mono", monospace;
+        font-size: 18px;
+        color: var(--muted);
+      }
+      .win .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: #3a4456;
+      }
+      .win .name {
+        margin-left: 10px;
+      }
+      .win .code {
+        padding: 22px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .win .ln {
+        display: block;
+        height: 12px;
+        border-radius: 6px;
+        background: #2b3547;
+      }
+      .win .ln.a {
+        background: #284b7d;
+      }
+
+      /* scene 3 */
+      .flash {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "TH Display", sans-serif;
+        font-weight: 700;
+        font-size: 168px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--fg);
+        text-shadow:
+          -7px 0 rgba(68, 147, 248, 0.75),
+          7px 0 rgba(248, 81, 73, 0.55);
+        opacity: 0;
+      }
+
+      /* scene 4 */
+      #s4 .flashwhite {
+        position: absolute;
+        inset: 0;
+        background: #dfe8ff;
+        opacity: 0;
+      }
+
+      /* scene 5: demo ---------------------------------------------------------- */
+      #s5 .caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 48px;
+        height: 64px;
+      }
+      #s5 .step {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        font-family: "TH Sans", sans-serif;
+        font-weight: 600;
+        font-size: 40px;
+        color: var(--fg);
+        opacity: 0;
+      }
+      #s5 .num {
+        font-family: "TH Mono", monospace;
+        font-weight: 700;
+        font-size: 26px;
+        color: var(--accent);
+        border: 2px solid rgba(68, 147, 248, 0.5);
+        border-radius: 10px;
+        padding: 4px 12px;
+      }
+      #demo {
+        position: absolute;
+        left: 120px;
+        top: 146px;
+        width: 1680px;
+        height: 880px;
+        display: flex;
+        gap: 26px;
+      }
+      .card {
+        border: 2px solid var(--line);
+        background: var(--card);
+        border-radius: 22px;
+        overflow: hidden;
+      }
+      #chat {
+        width: 560px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #chat .head {
+        height: 92px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 24px;
+        border-bottom: 2px solid var(--line);
+      }
+      #chat .avatar {
+        width: 52px;
+        height: 52px;
+        flex: none;
+      }
+      #chat .title {
+        font-weight: 600;
+        font-size: 24px;
+      }
+      #chat .sub {
+        font-size: 18px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      #chat .msgs {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 26px 22px;
+      }
+      .bubble {
+        max-width: 430px;
+        padding: 14px 18px 10px;
+        border-radius: 20px;
+        font-size: 22px;
+        line-height: 1.36;
+        background: var(--bubble);
+        color: var(--fg);
+        align-self: flex-start;
+      }
+      .bubble.me {
+        background: var(--accent-deep);
+        color: #fff;
+        align-self: flex-end;
+      }
+      .bubble .time {
+        display: block;
+        text-align: right;
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .bubble.me .time {
+        color: #ffffff;
+      }
+      #chat .foot {
+        padding: 0 0 26px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--accent);
+        opacity: 0;
+      }
+      #term {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #term .head {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 22px;
+        border-bottom: 2px solid var(--line);
+        font-family: "TH Mono", monospace;
+        font-size: 18px;
+        color: var(--muted);
+      }
+      #term .tdot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+      }
+      #term .tname {
+        flex: 1;
+        text-align: center;
+        margin-right: 70px;
+      }
+      #term .body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 20px;
+      }
+      #term .panes {
+        display: flex;
+        gap: 18px;
+        height: 486px;
+      }
+      .pane {
+        flex: 1;
+        border: 2px solid var(--line);
+        background: var(--card-2);
+        border-radius: 14px;
+        padding: 16px 18px;
+        font-family: "TH Mono", monospace;
+        font-size: 19px;
+      }
+      .pane .ph {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .chip {
+        font-size: 15px;
+        color: var(--muted);
+        background: #1b2130;
+        border-radius: 12px;
+        padding: 3px 10px;
+      }
+      .pane .role {
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .pl {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 47px;
+        white-space: pre;
+        color: var(--fg);
+      }
+      .pl .bul {
+        display: block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #a371f7;
+        flex: none;
+      }
+      .pl .pr {
+        color: var(--muted);
+      }
+      .ok {
+        color: var(--green);
+      }
+      .path {
+        color: #79b8ff;
+      }
+      .dim {
+        color: var(--muted);
+      }
+      #log {
+        flex: 1;
+        border: 2px solid var(--line);
+        background: var(--card-2);
+        border-radius: 14px;
+        padding: 14px 18px;
+        font-family: "TH Mono", monospace;
+        font-size: 18px;
+      }
+      #log .lh {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      .ll {
+        display: block;
+        height: 34px;
+        line-height: 34px;
+        white-space: pre;
+      }
+      .ic {
+        display: inline-block;
+        width: 0.9em;
+        height: 0.9em;
+        vertical-align: -0.08em;
+      }
+
+      /* scene 6: phone --------------------------------------------------------- */
+      #s6 .left {
+        position: absolute;
+        left: 200px;
+        top: 0;
+        bottom: 0;
+        width: 860px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 22px;
+      }
+      #s6 .left .cap {
+        font-size: 96px;
+      }
+      #phone {
+        position: absolute;
+        left: 1190px;
+        top: 166px;
+        width: 400px;
+        height: 748px;
+        border-radius: 58px;
+        border: 3px solid #2c3446;
+        background: linear-gradient(180deg, #111827 0%, #0a0d14 100%);
+        overflow: hidden;
+      }
+      #phone .island {
+        position: absolute;
+        left: 140px;
+        top: 18px;
+        width: 120px;
+        height: 32px;
+        border-radius: 16px;
+        background: #000;
+      }
+      #phone .day {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 86px;
+        text-align: center;
+        font-size: 22px;
+        color: var(--soft);
+      }
+      #phone .time {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 118px;
+        height: 124px;
+        overflow: hidden;
+      }
+      #phone .roll {
+        display: flex;
+        flex-direction: column;
+      }
+      #phone .roll span {
+        display: block;
+        height: 124px;
+        line-height: 124px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 108px;
+        letter-spacing: -0.02em;
+      }
+      #phone .notes {
+        position: absolute;
+        left: 22px;
+        right: 22px;
+        top: 290px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .note {
+        display: flex;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .note svg {
+        width: 34px;
+        height: 34px;
+        flex: none;
+      }
+      .note .nt {
+        display: flex;
+        justify-content: space-between;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      .note .np {
+        font-weight: 600;
+        font-size: 17px;
+        margin-top: 2px;
+      }
+      .note .nb {
+        font-size: 16px;
+        line-height: 1.3;
+        color: var(--soft);
+        margin-top: 2px;
+      }
+
+      /* scene 7 ------------------------------------------------------------------ */
+      .hit {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 26px;
+        padding: 0 200px;
+        text-align: center;
+        opacity: 0;
+      }
+      .hit .k {
+        font-family: "TH Mono", monospace;
+        font-weight: 700;
+        font-size: 28px;
+        color: var(--accent);
+      }
+      .hit .cap {
+        font-size: 92px;
+      }
+
+      /* scene 8: finale ---------------------------------------------------------- */
+      #s8 .halo {
+        position: absolute;
+        left: 360px;
+        top: 90px;
+        width: 1200px;
+        height: 700px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(68, 147, 248, 0.2), rgba(68, 147, 248, 0) 75%);
+      }
+      #brand {
+        position: relative;
+      }
+      #brand .streak {
+        position: absolute;
+        left: 50%;
+        top: 86px;
+        width: 1500px;
+        height: 3px;
+        margin-left: -750px;
+        background: linear-gradient(90deg, rgba(68, 147, 248, 0), rgba(140, 190, 255, 0.95) 50%, rgba(68, 147, 248, 0));
+      }
+      #brand .streak.soft {
+        top: 66px;
+        height: 44px;
+        filter: blur(18px);
+        background: linear-gradient(90deg, rgba(68, 147, 248, 0), rgba(68, 147, 248, 0.5) 50%, rgba(68, 147, 248, 0));
+      }
+      #brand .logo,
+      #brand .word,
+      #brand .tag {
+        position: relative;
+      }
+      #s8 .col {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+      }
+      #brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #brand .logo {
+        width: 176px;
+        height: 176px;
+      }
+      #brand .word {
+        margin-top: 26px;
+        font-weight: 700;
+        font-size: 124px;
+        letter-spacing: -0.025em;
+        line-height: 1;
+      }
+      #brand .tag {
+        margin-top: 22px;
+        font-family: "TH Serif", serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 48px;
+        color: var(--soft);
+      }
+      #endblock {
+        margin-top: 46px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+      #endblock .url {
+        font-family: "TH Mono", monospace;
+        font-weight: 700;
+        font-size: 36px;
+        color: var(--accent);
+      }
+      #endblock .chips {
+        font-size: 24px;
+        color: var(--muted);
+      }
+      #endblock .cmd {
+        margin-top: 6px;
+        font-family: "TH Mono", monospace;
+        font-size: 25px;
+        color: var(--soft);
+        border: 2px solid #2a3344;
+        background: rgba(11, 14, 20, 0.8);
+        border-radius: 14px;
+        padding: 14px 24px;
+      }
+      #endblock .cmd .pr {
+        color: var(--green);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="60"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- background: one ambient glow under every scene -->
+      <div id="bg" class="layer clip" data-start="0" data-duration="60" data-track-index="0">
+        <div class="glow"></div>
+      </div>
+
+      <!-- 1 · cold open: 02:47 -->
+      <section id="s1" class="scene clip" data-start="0" data-duration="5" data-track-index="1">
+        <div class="wrap">
+          <div class="clock"><span>02</span><span class="colon">:</span><span>47</span></div>
+          <div class="story">
+            <div class="lead" data-k="s1a"></div>
+            <div class="cap split" data-k="s1b"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 · several projects -->
+      <section id="s2" class="scene clip" data-start="5" data-duration="4.6" data-track-index="1">
+        <div class="wrap">
+          <div class="win" style="left: 150px; top: 250px">
+            <div class="head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="name">reports-app</span></div>
+            <div class="code"><span class="ln a" style="width: 62%"></span><span class="ln" style="width: 84%"></span><span class="ln" style="width: 48%"></span><span class="ln a" style="width: 70%"></span><span class="ln" style="width: 36%"></span><span class="ln" style="width: 76%"></span></div>
+          </div>
+          <div class="win" style="left: 700px; top: 196px">
+            <div class="head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="name">billing-api</span></div>
+            <div class="code"><span class="ln" style="width: 74%"></span><span class="ln a" style="width: 52%"></span><span class="ln" style="width: 88%"></span><span class="ln" style="width: 40%"></span><span class="ln a" style="width: 66%"></span><span class="ln" style="width: 58%"></span></div>
+          </div>
+          <div class="win" style="left: 1250px; top: 290px">
+            <div class="head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="name">landing</span></div>
+            <div class="code"><span class="ln a" style="width: 44%"></span><span class="ln" style="width: 80%"></span><span class="ln" style="width: 64%"></span><span class="ln" style="width: 90%"></span><span class="ln a" style="width: 38%"></span><span class="ln" style="width: 72%"></span></div>
+          </div>
+          <div class="story">
+            <div class="lead" data-k="s2a"></div>
+            <div class="cap split" data-k="s2b"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 · the race -->
+      <section id="s3" class="scene clip" data-start="9.6" data-duration="5.6" data-track-index="1">
+        <div class="wrap">
+          <div class="flash" data-k="f1"></div>
+          <div class="flash" data-k="f2"></div>
+          <div class="flash" data-k="f3"></div>
+          <div class="flash" data-k="f4"></div>
+          <div class="story s3text">
+            <div class="lead" data-k="s3a"></div>
+            <div class="cap split" data-k="s3b"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 · the turn -->
+      <section id="s4" class="scene clip" data-start="15.2" data-duration="4.8" data-track-index="1">
+        <div class="wrap">
+          <div class="story t1"><div class="lead" data-k="s4a"></div></div>
+          <div class="story t2"><div class="cap split" data-k="s4b"></div></div>
+          <div class="flashwhite"></div>
+        </div>
+      </section>
+
+      <!-- 5 · the demo -->
+      <section id="s5" class="scene clip" data-start="20" data-duration="17" data-track-index="1">
+        <div class="wrap">
+          <div class="caption">
+            <div class="step"><span class="num">01</span><span data-k="c1"></span></div>
+            <div class="step"><span class="num">02</span><span data-k="c2"></span></div>
+            <div class="step"><span class="num">03</span><span data-k="c3"></span></div>
+            <div class="step"><span class="num">04</span><span data-k="c4"></span></div>
+          </div>
+          <div id="demo">
+            <div id="chat" class="card">
+              <div class="head">
+                <svg class="avatar" viewBox="0 0 120 120" aria-hidden="true"><use href="#logo-mark" /></svg>
+                <div>
+                  <div class="title" data-k="botName"></div>
+                  <div class="sub" data-k="botSub"></div>
+                </div>
+              </div>
+              <div class="msgs">
+                <div class="bubble me" id="m1"><span data-k="m1"></span><span class="time">22:40</span></div>
+                <div class="bubble" id="m2"><span data-k="m2"></span><span class="time">22:41</span></div>
+                <div class="bubble" id="m3"><span data-k="m3"></span><span class="time">22:58</span></div>
+                <div class="bubble" id="m4"><span data-k="m4"></span><span class="time">23:52</span></div>
+                <div class="bubble me" id="m5"><span data-k="m5"></span><span class="time">23:53</span></div>
+              </div>
+              <div class="foot" data-k="foot"></div>
+            </div>
+            <div id="term" class="card">
+              <div class="head">
+                <span class="tdot" style="background: #f85149"></span><span class="tdot" style="background: #d29922"></span><span class="tdot" style="background: #3fb950"></span>
+                <span class="tname">herdr · default</span>
+              </div>
+              <div class="body">
+                <div class="panes">
+                  <div class="pane" id="pa">
+                    <div class="ph"><span class="chip">w1:p2</span><span class="role">claude · author</span></div>
+                    <div class="pl"><span class="pr">›</span>/opsx:apply add-csv-export</div>
+                    <div class="pl"><span class="bul"></span>Read tasks.md, handoff.md</div>
+                    <div class="pl"><span class="bul"></span>Edit <span class="path">reports/export.ts</span> <span class="ok">+84</span></div>
+                    <div class="pl"><span class="bul"></span>Edit <span class="path">reports/page.tsx</span> <span class="ok">+31</span></div>
+                    <div class="pl"><span class="bul"></span>npm test reports <span class="ok">42 passed</span></div>
+                    <div class="pl"><span class="bul"></span>./deploy.sh <span class="ok">ok</span></div>
+                    <div class="pl"><span class="bul"></span>make smoke <span class="ok">PASS</span></div>
+                    <div class="pl"><span class="bul"></span>/opsx:archive · git push</div>
+                  </div>
+                  <div class="pane" id="pr">
+                    <div class="ph"><span class="chip">w1:p3</span><span class="role">claude · reviewer</span></div>
+                    <div class="pl"><span class="pr">›</span>review add-csv-export</div>
+                    <div class="pl"><span class="dim">  money        </span><span class="ok">ok</span></div>
+                    <div class="pl"><span class="dim">  privacy      </span><span class="ok">ok</span></div>
+                    <div class="pl"><span class="dim">  security     </span><span class="ok">ok</span></div>
+                    <div class="pl"><span class="dim">  data loss    </span><span class="ok">ok</span></div>
+                    <div class="pl"><span class="dim">  concurrency  </span><span class="ok">ok</span></div>
+                    <div class="pl"> </div>
+                    <div class="pl"><span class="ok">  PASS</span> · 0 blocking findings</div>
+                  </div>
+                </div>
+                <div id="log">
+                  <div class="lh">harness-bridge</div>
+                  <span class="ll"><span class="dim">22:40:58 </span><span class="path">event      </span>task started · author in w1:p2</span>
+                  <span class="ll"><span class="dim">22:41:07 </span><span class="path">event      </span>author idle · controller woken</span>
+                  <span class="ll"><span class="dim">22:58:30 </span><span style="color: #b392f0">controller </span>plan approved · /opsx:apply</span>
+                  <span class="ll"><span class="dim">23:31:44 </span><span style="color: #b392f0">controller </span>review PASS · deploy + smoke</span>
+                  <span class="ll"><span class="dim">23:52:10 </span><span class="ok">watchdog   </span>no stalls · 0 alerts · done</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 · while you sleep -->
+      <section id="s6" class="scene clip" data-start="37" data-duration="6" data-track-index="1">
+        <div class="wrap">
+          <div class="left">
+            <div class="lead" data-k="s6a"></div>
+            <div class="cap split" data-k="s6b"></div>
+          </div>
+          <div id="phone">
+            <div class="island"></div>
+            <div class="day" data-k="day"></div>
+            <div class="time"><div class="roll"><span>02:47</span><span>07:12</span></div></div>
+            <div class="notes">
+              <div class="note">
+                <svg viewBox="0 0 120 120" aria-hidden="true"><use href="#logo-mark" /></svg>
+                <div><div class="nt"><span>Harness bot</span><span data-k="now"></span></div><div class="np">reports-app</div><div class="nb" data-k="n1"></div></div>
+              </div>
+              <div class="note">
+                <svg viewBox="0 0 120 120" aria-hidden="true"><use href="#logo-mark" /></svg>
+                <div><div class="nt"><span>Harness bot</span><span data-k="now"></span></div><div class="np">billing-api</div><div class="nb" data-k="n2"></div></div>
+              </div>
+              <div class="note">
+                <svg viewBox="0 0 120 120" aria-hidden="true"><use href="#logo-mark" /></svg>
+                <div><div class="nt"><span>Harness bot</span><span data-k="now"></span></div><div class="np">landing</div><div class="nb" data-k="n3"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 · three promises -->
+      <section id="s7" class="scene clip" data-start="43" data-duration="5.6" data-track-index="1">
+        <div class="wrap">
+          <div class="hit"><div class="k">01</div><div class="cap" data-k="h1"></div></div>
+          <div class="hit"><div class="k">02</div><div class="cap" data-k="h2"></div></div>
+          <div class="hit"><div class="k">03</div><div class="cap" data-k="h3"></div></div>
+        </div>
+      </section>
+
+      <!-- 8 · title and end card -->
+      <section id="s8" class="scene clip" data-start="48.6" data-duration="11.4" data-track-index="3">
+        <div class="wrap">
+          <div class="halo"></div>
+          <div class="col">
+            <div id="brand">
+              <div class="streak soft"></div>
+              <div class="streak"></div>
+              <svg class="logo" viewBox="0 0 120 120" role="img" aria-label="telegram-harness logo"><use href="#logo-mark" /></svg>
+              <div class="word">telegram-harness</div>
+              <div class="tag" data-k="tag"></div>
+            </div>
+            <div id="endblock">
+              <div class="url">github.com/nhype/telegram-harness</div>
+              <div class="chips" data-k="chips"></div>
+              <div class="cmd"><span class="pr">$ </span>git clone https://github.com/nhype/telegram-harness &amp;&amp; ./install.sh</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="vignette" class="layer clip" data-start="0" data-duration="60" data-track-index="4"></div>
+      <div id="bars" data-layout-allow-overflow class="layer clip" data-start="0" data-duration="60" data-track-index="5">
+        <div class="bar top"></div>
+        <div class="bar bottom"></div>
+      </div>
+
+      <!-- film grain (registry component grain-overlay) -->
+      <div id="grain-overlay" class="clip" data-start="0" data-duration="60" data-track-index="6"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100">
+        <div class="grain-texture"></div>
+      </div>
+      <style>
+        @keyframes hf-grain-noise {
+          0%, 100% { transform: translate(0, 0); }
+          10% { transform: translate(-5%, -5%); }
+          20% { transform: translate(-10%, 5%); }
+          30% { transform: translate(5%, -10%); }
+          40% { transform: translate(-5%, 15%); }
+          50% { transform: translate(-10%, 5%); }
+          60% { transform: translate(15%, 0); }
+          70% { transform: translate(0, 10%); }
+          80% { transform: translate(-15%, 0); }
+          90% { transform: translate(10%, 5%); }
+        }
+        #grain-overlay .grain-texture {
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+          opacity: 0.07;
+          animation: hf-grain-noise 0.5s steps(1) infinite;
+        }
+      </style>
+
+      <!-- the logo, defined once -->
+      <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="logo-g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4493f8" />
+            <stop offset="1" stop-color="#1f6feb" />
+          </linearGradient>
+          <g id="logo-mark">
+            <path d="M32 8H88A24 24 0 0 1 112 32V68A24 24 0 0 1 88 92H54L32 111V92A24 24 0 0 1 8 68V32A24 24 0 0 1 32 8Z" fill="url(#logo-g)" />
+            <path d="M38 35L56 50L38 65" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M65 66H84" stroke="#fff" stroke-width="9" stroke-linecap="round" />
+          </g>
+        </defs>
+      </svg>
+
+      <!-- sound: a synthesized bed (assets/audio/gen_bed.py) and Pixabay-licensed effects -->
+      <audio id="a-bed" src="assets/audio/bed.m4a" data-start="0" data-duration="60" data-track-index="10" data-volume="0.6"></audio>
+      <audio id="a-wh1" src="assets/audio/whoosh-short.mp3" data-start="4.9" data-duration="0.57" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="a-gl1" src="assets/audio/glitch-1.mp3" data-start="9.6" data-duration="0.45" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="a-gl2" src="assets/audio/glitch-2.mp3" data-start="10.1" data-duration="0.45" data-track-index="12" data-volume="0.5"></audio>
+      <audio id="a-gl3" src="assets/audio/glitch-1.mp3" data-start="10.6" data-duration="0.45" data-media-start="0.6" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="a-gl4" src="assets/audio/glitch-2.mp3" data-start="11.1" data-duration="0.45" data-media-start="0.8" data-track-index="12" data-volume="0.5"></audio>
+      <audio id="a-whc1" src="assets/audio/whoosh-cinematic.mp3" data-start="11.6" data-duration="3" data-track-index="13" data-volume="0.4"></audio>
+      <audio id="a-imp1" src="assets/audio/impact-bass-1.mp3" data-start="18" data-duration="2.1" data-track-index="11" data-volume="0.9"></audio>
+      <audio id="a-whc2" src="assets/audio/whoosh-cinematic.mp3" data-start="19.8" data-duration="3" data-track-index="13" data-volume="0.35"></audio>
+      <audio id="a-pop1" src="assets/audio/pop.mp3" data-start="21.2" data-duration="0.7" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="a-ping1" src="assets/audio/ping.mp3" data-start="22.4" data-duration="1.3" data-track-index="12" data-volume="0.35"></audio>
+      <audio id="a-typ1" src="assets/audio/typing.mp3" data-start="23.2" data-duration="1.5" data-track-index="11" data-volume="0.3"></audio>
+      <audio id="a-ping2" src="assets/audio/ping.mp3" data-start="25" data-duration="1.3" data-track-index="12" data-volume="0.35"></audio>
+      <audio id="a-typ2" src="assets/audio/typing.mp3" data-start="27.6" data-duration="1.5" data-track-index="11" data-volume="0.3"></audio>
+      <audio id="a-typ3" src="assets/audio/typing.mp3" data-start="31.2" data-duration="1.5" data-track-index="11" data-volume="0.3"></audio>
+      <audio id="a-not1" src="assets/audio/notification.mp3" data-start="33.4" data-duration="2.4" data-track-index="12" data-volume="0.4"></audio>
+      <audio id="a-pop2" src="assets/audio/pop.mp3" data-start="34.6" data-duration="0.7" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="a-wh2" src="assets/audio/whoosh-short.mp3" data-start="36.9" data-duration="0.57" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="a-not2" src="assets/audio/notification.mp3" data-start="38.2" data-duration="2.4" data-track-index="12" data-volume="0.35"></audio>
+      <audio id="a-not3" src="assets/audio/notification.mp3" data-start="38.9" data-duration="2.4" data-track-index="13" data-volume="0.35"></audio>
+      <audio id="a-not4" src="assets/audio/notification.mp3" data-start="39.6" data-duration="2.4" data-track-index="14" data-volume="0.35"></audio>
+      <audio id="a-wh3" src="assets/audio/whoosh-short.mp3" data-start="42.9" data-duration="0.57" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="a-wh4" src="assets/audio/whoosh-short.mp3" data-start="44.7" data-duration="0.57" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="a-wh5" src="assets/audio/whoosh-short.mp3" data-start="46.5" data-duration="0.57" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="a-rise" src="assets/audio/riser.mp3" data-start="45.6" data-duration="3" data-media-start="7" data-track-index="12" data-volume="0.55"></audio>
+      <audio id="a-imp2" src="assets/audio/impact-bass-2.mp3" data-start="48.6" data-duration="2.6" data-track-index="11" data-volume="1"></audio>
+      <audio id="a-spk" src="assets/audio/sparkle.mp3" data-start="48.8" data-duration="1.8" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="a-clk" src="assets/audio/click-soft.mp3" data-start="53" data-duration="0.37" data-track-index="11" data-volume="0.5"></audio>
+    </div>
+
+    <script>
+      // ---- copy ---------------------------------------------------------------
+      const COPY = {
+        en: {
+          s1a: "I was looking for a way",
+          s1b: "to get some sleep.",
+          s2a: "A way",
+          s2b: "to build several projects at once.",
+          f1: "One more prompt.",
+          f2: "One more tab.",
+          f3: "One more agent.",
+          f4: "One more night.",
+          s3a: "A way",
+          s3b: "not to burn out in the AI race.",
+          s4a: "Then I stopped babysitting my agents.",
+          s4b: "And gave them a manager.",
+          c1: "One message in Telegram",
+          c2: "Agents plan, code and test",
+          c3: "An independent reviewer checks",
+          c4: "Deploy. Live check. Merge.",
+          botName: "Harness bot",
+          botSub: "bot · your server",
+          m1: "Add CSV export to the reports page, ship it to production",
+          m2: "On it. Agent started, plan in openspec/changes/add-csv-export",
+          m3: "Plan reviewed, no blockers. Implementing the 9 tasks.",
+          m4: "Deployed. Live check passed: export downloads, totals match. Merged into main ✓",
+          m5: "nice",
+          foot: "asked you nothing in between",
+          s6a: "While you sleep",
+          s6b: "you wake up to done.",
+          day: "Monday",
+          now: "now",
+          n1: "Deployed. Live check passed. Merged into main ✓",
+          n2: "Done: 14/14 tasks, review PASS ✓",
+          n3: "Live. Smoke test passed ✓",
+          h1: "It asks only what's yours to decide.",
+          h2: "It never gets silently stuck.",
+          h3: "Your server. Your Claude plan. Open source.",
+          tag: "Your coding agents, managed from Telegram.",
+          chips: "Open source · MIT · Linux + systemd",
+        },
+        ru: {
+          s1a: "Я искал способ,",
+          s1b: "как выспаться.",
+          s2a: "Способ,",
+          s2b: "как разрабатывать сразу несколько проектов.",
+          f1: "Ещё один промпт.",
+          f2: "Ещё одна вкладка.",
+          f3: "Ещё один агент.",
+          f4: "Ещё одна ночь.",
+          s3a: "Способ,",
+          s3b: "как не быть выжатым в ИИ-гонке.",
+          s4a: "А потом я перестал нянчить своих агентов.",
+          s4b: "И дал им менеджера.",
+          c1: "Одно сообщение в Telegram",
+          c2: "Агенты пишут план, код и тесты",
+          c3: "Независимый ревьюер проверяет",
+          c4: "Деплой. Живая проверка. Слияние.",
+          botName: "Harness bot",
+          botSub: "бот · ваш сервер",
+          m1: "Добавь экспорт отчётов в CSV и выкати в прод",
+          m2: "Принято. Агент запущен, план в openspec/changes/add-csv-export",
+          m3: "План проверен, блокеров нет. Делаю 9 задач.",
+          m4: "Выкатил. Живая проверка пройдена: экспорт скачивается, суммы сходятся. Влито в main ✓",
+          m5: "огонь",
+          foot: "ни одного вопроса по пути",
+          s6a: "Пока вы спите,",
+          s6b: "а утром всё готово.",
+          day: "Понедельник",
+          now: "сейчас",
+          n1: "Выкатил. Живая проверка пройдена. Влито в main ✓",
+          n2: "Готово: 14/14 задач, ревью PASS ✓",
+          n3: "В проде. Smoke-тест пройден ✓",
+          h1: "Спрашивает только то, что решать вам.",
+          h2: "Никогда не застревает молча.",
+          h3: "Ваш сервер. Ваша подписка. Open source.",
+          tag: "Ваши агенты-программисты под управлением из Telegram.",
+          chips: "Open source · MIT · Linux + systemd",
+        },
+      };
+
+      const vars = (window.__hyperframes && window.__hyperframes.getVariables()) || {};
+      const LANG = COPY[vars.lang] ? vars.lang : "en";
+      const T = COPY[LANG];
+      document.documentElement.lang = LANG;
+
+      // ✓ is not in the fonts' latin/cyrillic subsets: draw it as an icon
+      const CHECK =
+        '<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="#3fb950" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      document.querySelectorAll("[data-k]").forEach((el) => {
+        const text = T[el.dataset.k];
+        if (el.classList.contains("split")) {
+          el.innerHTML = text
+            .split(" ")
+            .map((w) => '<span class="w">' + esc(w) + "</span>")
+            .join(" ");
+        } else {
+          el.innerHTML = esc(text).replace(/✓/g, CHECK);
+        }
+      });
+
+      // ---- motion -------------------------------------------------------------
+      const tl = gsap.timeline({ paused: true });
+      const q = (s) => document.querySelector(s);
+      const qa = (s) => document.querySelectorAll(s);
+
+      // reveal a caps line word by word
+      function caps(sel, t, stagger = 0.11) {
+        tl.fromTo(qa(sel + " .w"), { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger }, t);
+      }
+      // a serif lead drifting in from a soft blur
+      function lead(sel, t) {
+        tl.fromTo(q(sel), { y: 18, opacity: 0, filter: "blur(10px)" }, { y: 0, opacity: 1, filter: "blur(0px)", duration: 1.1, ease: "power2.out" }, t);
+      }
+      function exit(sel, t, d = 0.45) {
+        tl.to(q(sel), { opacity: 0, duration: d, ease: "power1.in" }, t);
+      }
+
+      // ambient glow and slow camera push on every story card
+      tl.fromTo("#bg .glow", { scale: 0.9, opacity: 0.7 }, { scale: 1.12, opacity: 1, duration: 6, ease: "sine.inOut", yoyo: true, repeat: 9 }, 0);
+
+      // 1 · 02:47 (0 - 5)
+      tl.fromTo("#s1 .wrap", { scale: 1 }, { scale: 1.06, duration: 5, ease: "none" }, 0);
+      tl.fromTo("#s1 .clock", { opacity: 0 }, { opacity: 0.11, duration: 1.4, ease: "power1.out" }, 0.2);
+      tl.fromTo("#s1 .colon", { opacity: 1 }, { opacity: 0.2, duration: 0.5, ease: "steps(1)", yoyo: true, repeat: 8 }, 0.2);
+      lead("#s1 .lead", 0.8);
+      caps("#s1 .cap", 1.9);
+      exit("#s1 .wrap", 4.55);
+
+      // 2 · several projects (5 - 9.6)
+      const S2 = 5;
+      tl.fromTo("#s2 .wrap", { scale: 1.04 }, { scale: 1, duration: 4.6, ease: "none" }, S2);
+      tl.fromTo(qa("#s2 .win"), { opacity: 0, y: 40 }, { opacity: 0.2, y: 0, duration: 0.9, ease: "power2.out", stagger: 0.18 }, S2 + 0.1);
+      tl.fromTo(qa("#s2 .ln"), { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.5, ease: "power2.out", stagger: 0.06 }, S2 + 0.5);
+      lead("#s2 .lead", S2 + 0.5);
+      caps("#s2 .cap", S2 + 1.3, 0.09);
+      exit("#s2 .wrap", S2 + 4.15);
+
+      // 3 · the race (9.6 - 15.2)
+      const S3 = 9.6;
+      qa("#s3 .flash").forEach((el, i) => {
+        const t = S3 + i * 0.5;
+        tl.set(el, { opacity: 1 }, t);
+        tl.fromTo(el, { x: i % 2 ? 26 : -26, scale: 1.08 }, { x: 0, scale: 1, duration: 0.42, ease: "power4.out" }, t);
+        tl.set(el, { opacity: 0 }, t + 0.42);
+      });
+      lead("#s3 .lead", S3 + 2.2);
+      caps("#s3 .cap", S3 + 2.9, 0.1);
+      exit("#s3 .s3text", S3 + 5.15);
+
+      // 4 · the turn (15.2 - 20)
+      const S4 = 15.2;
+      lead("#s4 .t1 .lead", S4 + 0.2);
+      exit("#s4 .t1", S4 + 2.0, 0.4);
+      tl.fromTo(qa("#s4 .t2 .w"), { scale: 1.25, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "expo.out", stagger: 0.05 }, S4 + 2.8);
+      tl.fromTo("#s4 .flashwhite", { opacity: 0.22 }, { opacity: 0, duration: 0.6, ease: "power2.out", immediateRender: false }, S4 + 2.8);
+      tl.fromTo("#s4 .t2", { scale: 1 }, { scale: 1.04, duration: 2, ease: "none" }, S4 + 2.8);
+      exit("#s4 .t2", S4 + 4.4, 0.4);
+
+      // letterbox opens for the real thing, closes after it
+      tl.fromTo("#bars .top", { yPercent: 0 }, { yPercent: -100, duration: 0.9, ease: "power3.inOut" }, 20);
+      tl.fromTo("#bars .bottom", { yPercent: 0 }, { yPercent: 100, duration: 0.9, ease: "power3.inOut" }, 20);
+      tl.to("#bars .top", { yPercent: 0, duration: 0.8, ease: "power3.inOut" }, 36.6);
+      tl.to("#bars .bottom", { yPercent: 0, duration: 0.8, ease: "power3.inOut" }, 36.6);
+
+      // 5 · the demo (20 - 37)
+      const S5 = 20;
+      const steps = qa("#s5 .step");
+      function step(i, t, until) {
+        tl.fromTo(steps[i], { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, t);
+        if (until) tl.to(steps[i], { opacity: 0, y: -10, duration: 0.3, ease: "power1.in" }, until);
+      }
+      function pop(sel, t) {
+        tl.fromTo(q(sel), { opacity: 0, y: 18, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, t);
+      }
+      function lines(nodes, t, gap) {
+        tl.fromTo(nodes, { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out", stagger: gap }, t);
+      }
+      const pa = qa("#pa .pl");
+      const pr = qa("#pr .pl");
+      const ll = qa("#log .ll");
+      tl.fromTo("#demo", { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.8, ease: "power3.out" }, S5 + 0.3);
+      step(0, S5 + 0.9, S5 + 2.7);
+      pop("#m1", S5 + 1.2);
+      pop("#m2", S5 + 2.4);
+      lines(ll[0], S5 + 2.5, 0);
+      step(1, S5 + 3.0, S5 + 7.1);
+      lines([pa[0], pa[1], pa[2], pa[3], pa[4]], S5 + 3.2, 0.42);
+      lines(ll[1], S5 + 4.0, 0);
+      pop("#m3", S5 + 5.0);
+      lines(ll[2], S5 + 5.2, 0);
+      step(2, S5 + 7.4, S5 + 10.8);
+      lines(pr, S5 + 7.6, 0.34);
+      lines(ll[3], S5 + 10.3, 0);
+      step(3, S5 + 11.0);
+      lines([pa[5], pa[6], pa[7]], S5 + 11.2, 0.5);
+      lines(ll[4], S5 + 12.8, 0);
+      pop("#m4", S5 + 13.4);
+      pop("#m5", S5 + 14.6);
+      tl.fromTo("#chat .foot", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, S5 + 15.1);
+      exit("#s5 .wrap", S5 + 16.4, 0.5);
+
+      // 6 · while you sleep (37 - 43)
+      const S6 = 37;
+      lead("#s6 .lead", S6 + 0.4);
+      tl.fromTo("#phone", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" }, S6 + 0.2);
+      tl.fromTo("#phone .roll", { y: 0 }, { y: -124, duration: 0.7, ease: "power3.inOut" }, S6 + 0.9);
+      tl.fromTo(qa("#phone .note"), { opacity: 0, y: 30, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.4)", stagger: 0.7 }, S6 + 1.2);
+      caps("#s6 .cap", S6 + 3.3, 0.1);
+      exit("#s6 .wrap", S6 + 5.55);
+
+      // 7 · three promises (43 - 48.6)
+      const S7 = 43;
+      qa("#s7 .hit").forEach((el, i) => {
+        const t = S7 + i * 1.8;
+        tl.fromTo(el, { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.4, ease: "power3.out" }, t);
+        tl.to(el, { opacity: 0, duration: 0.25, ease: "power1.in" }, t + 1.5);
+      });
+
+      // 8 · title and end card (48.6 - 60)
+      const S8 = 48.6;
+      tl.fromTo("#s8 .halo", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 1.6, ease: "power2.out" }, S8);
+      tl.fromTo(qa("#brand .streak"), { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 1.3, ease: "expo.out" }, S8 + 0.1);
+      tl.to(qa("#brand .streak"), { opacity: 0.55, duration: 3, ease: "sine.inOut", yoyo: true, repeat: 2 }, S8 + 1.5);
+      tl.fromTo("#brand .logo", { opacity: 0, scale: 0.6, filter: "drop-shadow(0 0 0px rgba(68,147,248,0))" },
+        { opacity: 1, scale: 1, filter: "drop-shadow(0 0 40px rgba(68,147,248,0.55))", duration: 1.1, ease: "expo.out" }, S8 + 0.15);
+      tl.fromTo("#brand .word", { opacity: 0, y: 30, scale: 1.05 }, { opacity: 1, y: 0, scale: 1, duration: 1.2, ease: "power3.out" }, S8 + 0.8);
+      tl.fromTo("#brand .tag", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 1, ease: "power2.out" }, S8 + 1.7);
+      tl.fromTo("#brand", { y: 150 }, { y: 0, duration: 1, ease: "power3.inOut" }, S8 + 4.2);
+      tl.fromTo(qa("#endblock > *"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", stagger: 0.35 }, S8 + 4.6);
+      exit("#s8 .wrap", S8 + 10.5, 0.9);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

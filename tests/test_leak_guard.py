@@ -39,6 +39,12 @@ def tracked_files():
     return [ROOT / p for p in out if (ROOT / p).is_file()]
 
 
+def is_binary(path: Path) -> bool:
+    """Git's heuristic: a NUL byte in the first 8000 bytes."""
+    with path.open("rb") as f:
+        return b"\0" in f.read(8000)
+
+
 def _sha(word: str) -> str:
     return hashlib.sha256(word.encode()).hexdigest()
 
@@ -63,6 +69,8 @@ def leaks(text: str, forbidden=FORBIDDEN) -> int:
 def test_no_private_tokens_or_secrets():
     bad = {}
     for path in tracked_files():
+        if is_binary(path):
+            continue
         count = leaks(path.read_text(encoding="utf-8", errors="ignore"))
         if count:
             bad[str(path.relative_to(ROOT))] = count
@@ -85,3 +93,13 @@ def test_guard_catches_names_embedded_in_longer_words():
     for text in ("@MySecretwordBot", "secretword2", "/srv/xsecretwordy/path", "id123456789", "x abc y"):
         assert leaks(text, table), text
     assert not leaks("abcdef abcabc", table)  # short tokens match whole words only
+
+
+def test_binary_files_are_not_scanned(tmp_path):
+    # random bytes in media form short letter runs that hit 3-letter tokens by chance
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"ftyp\x00\x01\x02 abc \xff\x00")
+    notes = tmp_path / "notes.md"
+    notes.write_text("plain text, abc")
+    assert is_binary(clip)
+    assert not is_binary(notes)
