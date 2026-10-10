@@ -136,6 +136,10 @@ owner's to answer.
   deadline, and set `wait={reason:"scheduled", until:<deadline>}` WITHOUT `quiet`: the agent resumes by
   itself when the watcher exits. Send no hourly "check now" prompts. Everything that does not depend on it
   (review, docs, other tasks) keeps moving.
+- An event that only happens naturally and must not be forced (the task says "only on natural …", "never
+  generate traffic", or allows "not observed"): ONE watch window of at most 1 h, then the agent records
+  "not observed" as the task allows and the task goes on to Finalize and the merge into main. Never
+  relaunch watchers in a loop; production logs keep the evidence when the event happens later.
 
 ## Independent acceptance (cheap, from facts)
 

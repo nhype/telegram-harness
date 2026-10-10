@@ -35,3 +35,14 @@ def test_webhook_prompt_names_the_controller_skill_and_project_placeholder():
 
 def test_claude_settings_is_json():
     assert isinstance(json.loads((ROOT / "templates" / "claude-settings.json").read_text()), dict)
+
+
+def test_agent_launch_settings_compact_early_and_disable_prompt_suggestions():
+    settings = json.loads((ROOT / "templates" / "claude-agent-settings.json").read_text())
+    assert settings["promptSuggestionEnabled"] is False
+    assert int(settings["env"]["CLAUDE_CODE_AUTO_COMPACT_WINDOW"]) > 0
+
+
+def test_delivery_skill_launches_agents_with_the_settings_file():
+    text = (ROOT / "skills" / "harness-delivery" / "SKILL.md").read_text()
+    assert re.search(r"claude --dangerously-skip-permissions --settings\s+\{\{AGENT_SETTINGS\}\}", text)

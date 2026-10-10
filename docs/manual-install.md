@@ -25,6 +25,7 @@ hermes -p acme config set approvals.mode smart
 hermes -p acme config set approvals.timeout 300
 hermes -p acme config set approvals.smart_policy "$(cat templates/smart-policy.txt)"
 mkdir -p $H/plugins
+cp -n templates/claude-agent-settings.json $H/claude-agent-settings.json
 ln -sfn "$PWD/harness/scripts" $H/scripts
 for p in herdr-control herdr-approval-bridge herdr-silence-fix; do
   ln -sfn "$PWD/harness/plugins/$p" $H/plugins/$p
@@ -33,7 +34,7 @@ done
 hermes -p acme tools enable herdr --platform telegram
 hermes -p acme tools enable file herdr skills terminal --platform webhook
 python3 harness/tools/harness_setup.py skills --home $H --src skills \
-  --var PROJECT=Acme --var REPO=/srv/acme --var PROFILE=acme
+  --var PROJECT=Acme --var REPO=/srv/acme --var PROFILE=acme --var AGENT_SETTINGS=$H/claude-agent-settings.json
 python3 harness/tools/harness_setup.py pipeline --home $H --profile acme --project Acme \
   --repo /srv/acme --owner 123456789 --route herdr-acme
 ```

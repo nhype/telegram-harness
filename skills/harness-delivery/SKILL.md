@@ -37,8 +37,10 @@ routes, verifies and reports. It does not write product code itself.
 2. Pick the pane: reuse the task's pane for a continuing change; otherwise create one:
    `herdr_control tab_create` (cwd `{{REPO}}`) → **register first**: `herdr_task create`
    (id `{{PROFILE}}-<change>`, pane ids, cwd, change, phase `propose`, execution_profile, risk_flags,
-   brief per «Brief») → `herdr_control pane_run text="claude --dangerously-skip-permissions"` → answer
-   the startup trust screen if shown. Model/effort come from the repo's `.claude/settings.json`.
+   brief per «Brief») → `herdr_control pane_run text="claude --dangerously-skip-permissions --settings
+   {{AGENT_SETTINGS}}"` → answer the startup trust screen if shown. Model/effort come from the repo's
+   `.claude/settings.json`; the `--settings` file adds auto-compact at 400k tokens and turns off prompt
+   suggestions.
 3. Send the first prompt («New task» template) with `herdr_control agent_prompt` (wait=false) and confirm
    the returned status is `working`.
 4. Tell the owner in one or two lines what was started. From here the event controller

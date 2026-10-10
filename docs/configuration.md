@@ -57,6 +57,12 @@ The installer copies [`templates/claude-settings.json`](../templates/claude-sett
 `<repo>/.claude/settings.json` when the repo has none. Change `model` / `effortLevel` there; the
 controller never switches models itself.
 
+Agents are launched as `claude --dangerously-skip-permissions --settings <profile>/claude-agent-settings.json`.
+That file (from [`templates/claude-agent-settings.json`](../templates/claude-agent-settings.json), kept once
+edited) makes long sessions compact at 400k tokens (`CLAUDE_CODE_AUTO_COMPACT_WINDOW`) instead of growing
+toward the full window, and turns off prompt suggestions, which a stray Enter from the controller could
+submit as a task. It only affects sessions started after a change.
+
 ## Several projects
 
 Run the installer once per project with a different `--project`/`--profile`. Each profile gets its own

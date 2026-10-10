@@ -43,6 +43,8 @@ for plugin in herdr-control herdr-approval-bridge herdr-silence-fix; do
 done
 grep -q "{{" "$P/skills/harness-controller/SKILL.md" && fail "controller skill has unrendered placeholders"
 grep -q "Acme" "$P/skills/harness-controller/SKILL.md" || fail "controller skill not rendered for Acme"
+[[ -f "$P/claude-agent-settings.json" ]] || fail "agent launch settings not installed"
+grep -q "$P/claude-agent-settings.json" "$P/skills/harness-delivery/SKILL.md" || fail "delivery skill lacks the agent settings path"
 grep -q "openspec init --tools claude" "$STUB_LOG" || fail "repo was not initialized with openspec"
 grep -q "^hermes config set platforms.webhook.extra.port 8699$" "$STUB_LOG" || fail "host webhook port not configured"
 grep -q "^hermes -p acme config set platforms.webhook" "$STUB_LOG" && fail "webhook listener configured on the profile, not the host"

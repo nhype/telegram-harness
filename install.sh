@@ -213,6 +213,11 @@ setup_profile() {
   fi
 
   run mkdir -p "$HOME_P/plugins"
+  # Launch settings for the coding agents (`claude --settings <file>`): compact at 400k tokens and no
+  # prompt suggestions that a stray Enter from the controller could submit. Kept once edited.
+  if [[ ! -f "$HOME_P/claude-agent-settings.json" ]]; then
+    run cp "$HARNESS_ROOT/templates/claude-agent-settings.json" "$HOME_P/claude-agent-settings.json"
+  fi
   link_dir "$HARNESS_ROOT/harness/scripts" "$HOME_P/scripts"
   local plugin
   for plugin in "${PLUGINS[@]}"; do
@@ -223,7 +228,8 @@ setup_profile() {
   run hermes -p "$PROFILE" tools enable file herdr skills terminal --platform webhook
 
   helper skills --home "$HOME_P" --src "$HARNESS_ROOT/skills" \
-    --var "PROJECT=$PROJECT" --var "REPO=${REPOS[0]}" --var "PROFILE=$PROFILE"
+    --var "PROJECT=$PROJECT" --var "REPO=${REPOS[0]}" --var "PROFILE=$PROFILE" \
+    --var "AGENT_SETTINGS=$HOME_P/claude-agent-settings.json"
   local repo_args=() repo
   for repo in "${REPOS[@]}"; do repo_args+=(--repo "$repo"); done
   local sibling=()
