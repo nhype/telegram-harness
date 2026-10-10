@@ -37,6 +37,13 @@ def test_claude_settings_is_json():
     assert isinstance(json.loads((ROOT / "templates" / "claude-settings.json").read_text()), dict)
 
 
+def test_repo_settings_also_compact_early_whatever_the_launch_command():
+    # The controller sometimes copies a launch command from the repo docs without `--settings`.
+    settings = json.loads((ROOT / "templates" / "claude-settings.json").read_text())
+    assert settings["env"]["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] == "400000"
+    assert settings["promptSuggestionEnabled"] is False
+
+
 def test_agent_launch_settings_compact_early_and_disable_prompt_suggestions():
     settings = json.loads((ROOT / "templates" / "claude-agent-settings.json").read_text())
     assert settings["promptSuggestionEnabled"] is False

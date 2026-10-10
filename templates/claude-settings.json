@@ -1,4 +1,8 @@
 {
   "model": "opus",
-  "effortLevel": "high"
+  "effortLevel": "high",
+  "promptSuggestionEnabled": false,
+  "env": {
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000"
+  }
 }

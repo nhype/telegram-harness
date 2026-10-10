@@ -61,7 +61,9 @@ Agents are launched as `claude --dangerously-skip-permissions --settings <profil
 That file (from [`templates/claude-agent-settings.json`](../templates/claude-agent-settings.json), kept once
 edited) makes long sessions compact at 400k tokens (`CLAUDE_CODE_AUTO_COMPACT_WINDOW`) instead of growing
 toward the full window, and turns off prompt suggestions, which a stray Enter from the controller could
-submit as a task. It only affects sessions started after a change.
+submit as a task. It only affects sessions started after a change. The repo template carries the same two
+settings, so an agent still gets them when the controller copies a launch command from the repo's own docs
+without `--settings`. A repo that already had `.claude/settings.json` needs them added by hand.
 
 ## Several projects
 
