@@ -359,7 +359,7 @@ def test_task_tool_roundtrip(env) -> None:
     assert call(module, "task", action="get", task_id="t1")["task"]["pane_id"] == "w5:pZ"
     upd = call(module, "task", action="update", task_id="t1",
                fields={"phase": "review", "wait": {"reason": "user_decision", "note": "Q1"}})
-    assert upd["success"] is True and sorted(upd["changed"]) == ["phase", "wait"]
+    assert upd["success"] is True and sorted(upd["changed"]) == ["open_question", "phase", "wait"]
     assert call(module, "task", action="note", task_id="t1", text="checked tests")["success"]
     assert call(module, "task", action="decision", task_id="*", text="deploys allowed", by="user")["success"]
     listed = call(module, "task", action="list")

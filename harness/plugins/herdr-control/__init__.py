@@ -849,8 +849,9 @@ def _slash(raw_args: str) -> str:
 OWNER_QUESTIONS_MAX = 5
 OWNER_QUESTIONS_HINT = (
     "If the owner's message answers one of them (a bare «yes», «no» or an option number counts), apply it "
-    "in this turn: herdr_task decision (by:\"user\") with the answer in full words, clear that task's wait "
-    "({reason:\"none\"}), send the answer to the agent pane, then confirm in one line. Otherwise ignore this block.")
+    "in this turn: herdr_task decision (by:\"user\") with the answer in full words (this closes the question), "
+    "clear that task's wait if it is user_decision ({reason:\"none\"}), send the answer to the agent pane, then "
+    "confirm in one line. Otherwise ignore this block.")
 
 
 def _owner_id() -> str:
@@ -881,10 +882,16 @@ def open_questions_context(platform: str = "", sender_id: Any = "", **_: Any) ->
             if not isinstance(item, dict) or not item.get("enabled", True) or item.get("completed"):
                 continue
             wait = item.get("wait") if isinstance(item.get("wait"), dict) else {}
-            if wait.get("reason") != "user_decision":
+            # The controller may move the wait on to the agent's own work; the question stays open.
+            question = item.get("open_question") if isinstance(item.get("open_question"), dict) else {}
+            if wait.get("reason") == "user_decision":
+                note, since = wait.get("note"), item.get("updated_at", "")
+            elif question:
+                note, since = question.get("text"), question.get("at", "")
+            else:
                 continue
-            note = str(wait.get("note") or "(question not recorded: read the task)")[:300]
-            lines.append(f"- {item.get('id')} (pane {item.get('pane_id')}, since {item.get('updated_at', '')}): {note}")
+            note = str(note or "(question not recorded: read the task)")[:300]
+            lines.append(f"- {item.get('id')} (pane {item.get('pane_id')}, since {since}): {note}")
     except Exception:
         return None
     if not lines:

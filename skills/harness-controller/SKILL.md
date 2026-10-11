@@ -121,9 +121,13 @@ owner's to answer.
    waits.
 5. **How to ask.** The final answer of this run IS the question, never [SILENT]. Format: what happened →
    options with consequences → your recommendation → one question answerable with "yes" or a number. Set
-   `wait={reason:"user_decision", note:"<the question, ≤300 chars>"}`; the registry adds a 3 h recheck. The
-   owner's chat session sees open questions and routes the reply to the task.
-6. **The recheck** (`wait_elapsed` with `wait.reason=user_decision`). `herdr_task get`:
+   `wait={reason:"user_decision", note:"<the question, ≤300 chars>"}`; the registry adds a 3 h recheck and
+   records `open_question`. The owner's chat session sees open questions and routes the reply to the task.
+   You may then move the wait to `scheduled` for the agent's own work: `open_question` stays until a
+   decision by `user` is recorded. A second question on the same task: rewrite `open_question` with both.
+   If you settle a question yourself (step 6), clear it: `update {open_question: null}`.
+6. **The recheck** (`wait_elapsed` with `wait.reason=user_decision`, or any wake where `open_question.at`
+   is 3 h old). `herdr_task get`:
    - a decision by `user` is recorded → apply it;
    - no answer, reversible choice → proceed with your recommendation, record the decision (by
      `controller`), tell the owner in one line: "No answer yet — doing <what>; say the word to undo";

@@ -69,3 +69,13 @@ def test_unconfigured_profile_injects_nothing(tmp_path, monkeypatch):
     (home / "herdr-pipeline.json").unlink()
     m = load(home, monkeypatch)
     assert m.open_questions_context(platform="telegram", sender_id=OWNER) is None
+
+
+def test_question_stays_visible_after_the_wait_moves_on(tmp_path, monkeypatch):
+    # The controller once moved the wait to `scheduled` for the agent's own tests while two
+    # owner questions were open; the owner's «yes» would have reached a chat that never saw them.
+    question = {"text": "Allow a short maintenance window?", "at": "2026-10-11T20:26:02+00:00"}
+    home = profile(tmp_path, [task("pricing", "scheduled", "browser tests", open_question=question)])
+    out = load(home, monkeypatch).open_questions_context(platform="telegram", sender_id=OWNER)
+    assert "pricing" in out["context"] and "Allow a short maintenance window?" in out["context"]
+    assert "2026-10-11T20:26:02+00:00" in out["context"]

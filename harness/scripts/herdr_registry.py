@@ -54,6 +54,9 @@ WAIT_REASONS = ("none", "user_decision", "external", "scheduled", "complete")
 RECHECK_SECONDS = {"user_decision": 3 * 3600, "external": 3600}
 OWNER_QUESTION_REMINDER = ("The owner has not been asked yet: your final answer must be this question "
                            "to the owner, not [SILENT].")
+# A question outlives the wait that asked it: the controller may move the wait to `scheduled` for the
+# agent's own work, and the owner's chat must still see the question until his decision is recorded.
+OWNER_SOURCES = ("user", "owner")
 POLICY_KEYS = (
     "allow_continue", "allow_tests", "allow_deploy",
     "allow_commit", "allow_push", "allow_sync_archive",
@@ -71,7 +74,7 @@ CORE_FIELDS = (
     "phase", "phase_generation", "branch", "execution_profile", "changed_files",
     "risk_flags", "policy", "candidate_sha", "deploy_revision", "evidence_manifest",
     "parent_task_id", "parent_pane_id", "reviewer_pane_id", "reviewer_task_id", "brief", "brief_path",
-    "kanban_task_id", "legacy_path", "wait", "notes", "decisions", "tombstone",
+    "kanban_task_id", "legacy_path", "wait", "open_question", "notes", "decisions", "tombstone",
     "archived_at", "updated_at",
 )
 # Keys projected into webhook payloads by herdr_workflow_context.FIELDS (and so
@@ -307,6 +310,12 @@ def _profile(value: Any, field: str = "execution_profile") -> str:
     return text
 
 
+def _open_question(value: Any, field: str = "open_question") -> dict[str, str]:
+    if isinstance(value, dict):
+        value = value.get("text")
+    return {"text": _str(value, field, 300, required=True), "at": now_iso()}
+
+
 def _compat(value: Any, field: str) -> Any:
     try:
         encoded = json.dumps(value, ensure_ascii=False)
@@ -349,6 +358,7 @@ _VALIDATORS: dict[str, Callable[[Any, dict[str, Any]], Any]] = {
     "brief_path": lambda v, t: _str(v, "brief_path", 500),
     "kanban_task_id": lambda v, t: _str(v, "kanban_task_id", 128),
     "wait": lambda v, t: _wait(v, task=t),
+    "open_question": lambda v, t: _open_question(v),
 }
 UPDATABLE_FIELDS = tuple(sorted(set(_VALIDATORS) | set(COMPAT_FIELDS)))
 
@@ -763,6 +773,9 @@ def update(task_id: str, fields: dict[str, Any], by: str = "controller", *,
             raise RegistryError("generation_conflict",
                                 f"phase_generation is {current}, expected {expect_generation}; re-read the task")
         changed = _apply_fields(task, fields)
+        if "wait" in changed and task["wait"]["reason"] == "user_decision" and "open_question" not in fields:
+            task["open_question"] = _open_question(task["wait"]["note"] or "(not recorded: read the task)")
+            changed.append("open_question")
         if changed:
             task["updated_at"] = now_iso()
         result = {"success": True, "task_id": task_id, "changed": changed, "by": by,
@@ -803,7 +816,10 @@ def add_decision(task_id: str, text: str, source: str = "controller",
         decisions.append(entry)
         task["decisions"] = decisions[-MAX_TASK_DECISIONS:]
         task["updated_at"] = entry["at"]
-        return {"success": True, "task_id": task_id, "decision": entry, "decisions_total": len(task["decisions"])}
+        result = {"success": True, "task_id": task_id, "decision": entry, "decisions_total": len(task["decisions"])}
+        if entry["source"] in OWNER_SOURCES and task.pop("open_question", None) is not None:
+            result["question_closed"] = True
+        return result
 
     return transaction(registry, mutate)
 

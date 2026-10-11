@@ -59,4 +59,5 @@ The controller decides technical, internal and reversible questions itself and r
 asks you only about money beyond the budget, irreversible production actions, user-visible product
 choices and your personal accounts — and asking never stops the rest of the task. Your reply in the chat
 is routed to the waiting task: the `herdr-control` hook shows the chat run the open questions, so a bare
-"yes" lands where it belongs.
+"yes" lands where it belongs. A question stays open in the task's `open_question` until your decision is
+recorded, even after the controller moves the task's wait on to the agent's own work.
