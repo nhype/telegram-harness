@@ -27,6 +27,9 @@ the task is finished, not the length of this run.
   no output for 20 min. So: never sleep, poll, `agent_wait`, or create cron jobs to check later.
 - `hint.kind` is a pre-classified reading of the pane tail: none | connection_error | rate_limit |
   login_required | menu_open | context_limit.
+- `progress` is the change's checklist: `done`/`total` items and `stalled_minutes` since `done` last
+  changed. `reason=no_progress` fires when it has not moved for 4 h (again every 4 h, even during a
+  `scheduled` wait); after 12 h the bridge tells the owner itself.
 
 ## Procedure
 
@@ -64,6 +67,7 @@ the task is finished, not the length of this run.
 | `reason=wait_elapsed` and `wait.reason=user_decision` | The recheck in «Owner questions», step 6. |
 | `reason=wait_elapsed` (other) | Do the scheduled check now. |
 | `reason=working_no_output` | If the tail shows a hang: `esc`, then the resume prompt; else [SILENT]. |
+| `reason=no_progress`, or a gate fails again | «Loops» below. |
 | Pane dead / task gone | [SILENT]. |
 
 ## Owner policy (standing rules — do not ask again)
@@ -108,7 +112,7 @@ owner's to answer.
    message, not as a question.
 2. **A brief limit is not a question.** If the agent's plan breaks a limit the owner set ("no new paid
    calls", "no top-ups"), send the plan back to fit the limit. Ask the owner only if the goal cannot be
-   met within it.
+   met within it, and then at once («Loops»).
 3. **Owner-only kinds:** money beyond what is authorized (top-ups, new paid services); destructive or
    irreversible production actions (deleting data, rotating a live secret); a user-visible product choice
    the brief does not settle; the owner's personal accounts, OAuth or `/login`.
@@ -125,6 +129,36 @@ owner's to answer.
      `controller`), tell the owner in one line: "No answer yet — doing <what>; say the word to undo";
    - no answer, owner-only kind → remind once in one line, set `until` to now+12 h; after that only the
      owner unblocks it.
+
+## Loops: no progress, repeated failures, unreachable targets
+
+Progress means checklist items closed (`progress` in the payload, `openspec list`). Commits, diagnostics
+and reruns are not progress. A load-testing task once sat 14 h at 49/67, chasing a latency bound that the
+host's disk could not meet. The agent had written that down early, but it made six more fix rounds before
+the owner was asked.
+
+1. **An unreachable target means ask the owner at once.** The agent's evidence may say a criterion is
+   limited by the environment (disk, CPU, host load, a provider quota, an external service) and not by
+   the code. Then stop every attempt at that criterion in the same run, and ask the owner («Owner
+   questions», step 5). Give these options and your recommendation:
+   - drop or relax the criterion for this environment;
+   - pay for a better environment (the price first);
+   - keep the work on the branch and stop.
+
+   Until the owner answers, the agent continues only with work that does not depend on the answer.
+2. **Three strikes.** A gate may fail on three consecutive candidates, or after three fix attempts,
+   without its verdict improving (the same failing check, the same bucket). Treat that as rule 1. A
+   fourth attempt needs an owner decision or a new approach that you can name.
+3. **Plan thresholds are not owner decisions.** The owner can change numbers that the agent froze in its
+   own plan (SLOs, budgets, windows). Tell the owner that relaxing one contradicts their decision only
+   when a `user` decision says so, and quote that decision.
+4. **On `reason=no_progress`,** read `progress`, the pane and the change's verification notes:
+   - a planned long run with a known end (a benchmark series, a full suite) → set `wait.until` to that
+     end and answer [SILENT];
+   - the same failing gate again, or an environment limit → apply rules 1–2 now;
+   - anything else → send the next concrete step that closes a checklist item.
+5. **Report progress honestly.** An owner message gives `done/total` and how long that number has not
+   moved. "Commits and diagnostics continue" is not progress.
 
 ## Live evidence: create it, do not wait for it
 

@@ -38,6 +38,7 @@ PAYLOAD_DEFAULTS = {
     'coalesced': 0,
     'hint': {'kind': 'none', 'label': ''},
     'wait': {'reason': 'none', 'until': ''},
+    'progress': {'done': 0, 'total': 0, 'stalled_minutes': 0},
 }
 
 

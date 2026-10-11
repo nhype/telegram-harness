@@ -5,6 +5,7 @@ task={task.id} project={task.project} change={task.change} phase={task.phase} pr
 herdr: session={task.session} workspace={task.workspace_id} pane={task.pane_id} agent={task.agent} cwd={task.cwd}
 policy: continue={task.policy.allow_continue} tests={task.policy.allow_tests} deploy={task.policy.allow_deploy} commit={task.policy.allow_commit} push={task.policy.allow_push} sync_archive={task.policy.allow_sync_archive}
 wait: reason={wait.reason} until={wait.until}
+progress: {progress.done}/{progress.total} checklist items, unchanged for {progress.stalled_minutes} min
 workflow (author/reviewer from the registry): {workflow}
 
 Follow the loaded skill harness-controller: one pane read, decide by its table, one action, one herdr_task write.

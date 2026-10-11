@@ -64,7 +64,7 @@ SHA_RE = re.compile(r"^[0-9a-fA-F]{7,64}$")
 MAX_EVIDENCE_BYTES = 1_048_576
 
 EVENT_TYPE = "herdr.agent_status_changed"
-WAKE_REASONS = ("status", "stall", "wait_elapsed", "working_no_output", "deferred")
+WAKE_REASONS = ("status", "stall", "wait_elapsed", "working_no_output", "deferred", "no_progress")
 WAIT_REASONS = frozenset({"none", "user_decision", "external", "scheduled", "complete"})
 # `external` without `until`: the linked side (author/reviewer) drives the next wake, not the watchdog.
 WAIT_SUPPRESSES_STALL = frozenset({"user_decision", "complete", "external"})
@@ -76,6 +76,8 @@ MAX_RECENT_WORK = 8
 MAX_SOCKET_BUFFER = 4 * 1024 * 1024
 NO_HINT = {"kind": "none", "label": ""}
 NO_WAIT = {"reason": "none", "until": ""}
+NO_PROGRESS = {"done": 0, "total": 0, "stalled_minutes": 0}
+CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[([ xX])\]", re.MULTILINE)
 
 
 # ---------------------------------------------------------------------------
@@ -688,6 +690,26 @@ def record_status(
     return True
 
 
+def checklist_progress(task: dict[str, Any]) -> tuple[int, int] | None:
+    """Checked and total items of the task's OpenSpec checklist; None when it has none.
+
+    The checklist is the task's progress measure: commits and diagnostics can keep
+    coming while no item closes (once: 14 h at 49/67 on a gate the host could not meet).
+    """
+    cwd, change = str(task.get("cwd") or ""), str(task.get("change") or "")
+    if not cwd.startswith("/") or not ID_RE.match(change) or "/" in change or ".." in change:
+        return None
+    try:
+        text = (Path(cwd) / "openspec" / "changes" / change / "tasks.md").read_text(
+            encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    marks = CHECKBOX_RE.findall(text)
+    if not marks:
+        return None
+    return sum(1 for mark in marks if mark in "xX"), len(marks)
+
+
 def build_payload(
     task: dict[str, Any],
     pane: dict[str, Any],
@@ -699,6 +721,7 @@ def build_payload(
     coalesced: int = 0,
     hint: dict[str, str] | None = None,
     wait: dict[str, str] | None = None,
+    progress: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Build the webhook payload from the CURRENT task.  Every key is non-null."""
     now = time.time() if now is None else now
@@ -707,6 +730,7 @@ def build_payload(
     duration = pane.get("last_status_duration_seconds")
     wait = wait or NO_WAIT
     hint = hint or NO_HINT
+    progress = progress or NO_PROGRESS
     return {
         "event_type": EVENT_TYPE,
         "event_id": event_id or f"{task['id']}:{int(pane.get('generation') or 0)}:{status}",
@@ -717,6 +741,7 @@ def build_payload(
         "coalesced": int(coalesced or 0),
         "hint": {"kind": str(hint.get("kind") or "none"), "label": str(hint.get("label") or "")},
         "wait": {"reason": str(wait.get("reason") or "none"), "until": str(wait.get("until") or "")},
+        "progress": {key: int(progress.get(key) or 0) for key in NO_PROGRESS},
         "task": task,
         "task_fingerprint": task_fingerprint(task),
         "evidence": evidence_status(task),
@@ -1049,6 +1074,10 @@ class BridgeConfig:
         "alert_env": "",
         "alert_transport_interval": 3600.0,
         "stall_alert_seconds": 5400.0,
+        # The checklist has not moved for this long: wake the controller for a loop review
+        # (again at each further multiple), and tell the owner once at the alert threshold.
+        "no_progress_seconds": 4 * 3600.0,
+        "no_progress_alert_seconds": 12 * 3600.0,
         "topology_min_interval": 5.0,
         "pane_refresh_seconds": 60.0,
     }
@@ -1097,6 +1126,8 @@ class BridgeConfig:
             working_no_output_seconds=args.working_no_output_seconds,
             watchdog=not args.no_watchdog,
             watchdog_interval=args.watchdog_interval,
+            no_progress_seconds=args.no_progress_seconds,
+            no_progress_alert_seconds=args.no_progress_alert_seconds,
         )
 
 
@@ -1155,8 +1186,10 @@ class Bridge:
         threaded: bool = True,
         clock: Callable[[], float] = time.time,
         alert: Callable[[str], Any] | None = None,
+        read_progress: Callable[[dict[str, Any]], tuple[int, int] | None] | None = None,
     ) -> None:
         self.cfg = cfg
+        self._read_progress = read_progress or checklist_progress
         if alert is None and cfg.alert_chat and cfg.alert_env:
             def alert(text: str) -> None:  # off the event loop: Telegram may be slow
                 threading.Thread(target=send_owner_alert, args=(cfg.alert_env, cfg.alert_chat, text),
@@ -1639,6 +1672,7 @@ class Bridge:
         payload = build_payload(
             task, pane, status=entry["status"], reason=entry["reason"], event_id=entry["event_id"],
             now=now, coalesced=int(entry.get("coalesced") or 0), wait=self.wait_for(task["id"]),
+            progress=self.progress_view(pane, now),
         )
         wire = json.loads(json.dumps(payload, ensure_ascii=False))  # detached copy for the worker
         self.sending = {"entry": entry, "fingerprint": payload["task_fingerprint"], "started": now}
@@ -1824,7 +1858,72 @@ class Bridge:
             pane = self.state["panes"].get(task_id)
             if not pane or not pane.get("last_seen") or pane.get("wake") or pane.get("deferred"):
                 continue
+            self._track_progress(task, pane, now)
+            if self._watch_progress(task, pane, now):
+                continue
             self._watch_task(task, pane, now)
+
+    # -- checklist progress -------------------------------------------------------------
+
+    def _track_progress(self, task: dict[str, Any], pane: dict[str, Any], now: float) -> None:
+        """Remember when the checklist's checked count last changed."""
+        try:
+            counts = self._read_progress(task)
+        except Exception:  # noqa: BLE001 - progress is advisory
+            counts = None
+        if counts is None:
+            return
+        done, total = counts
+        prog = pane.get("progress")
+        if not isinstance(prog, dict) or prog.get("done") != done:
+            epoch = int(prog.get("epoch") or 0) + 1 if isinstance(prog, dict) else 1
+            pane["progress"] = {"done": done, "total": total, "moved_at": now, "epoch": epoch, "wakes": 0}
+            self.dirty = True
+        elif prog.get("total") != total:
+            prog["total"] = total
+            self.dirty = True
+
+    def progress_view(self, pane: dict[str, Any], now: float) -> dict[str, int]:
+        prog = pane.get("progress")
+        if not isinstance(prog, dict):
+            return dict(NO_PROGRESS)
+        stalled = max(0.0, now - float(prog.get("moved_at") or now))
+        return {"done": int(prog.get("done") or 0), "total": int(prog.get("total") or 0),
+                "stalled_minutes": int(stalled // 60)}
+
+    def _watch_progress(self, task: dict[str, Any], pane: dict[str, Any], now: float) -> bool:
+        """Activity without checklist movement: wake for a loop review, then tell the owner once.
+
+        Runs before the wait handling on purpose: a loop sets a fresh `scheduled` wait each round.
+        A wait on the owner, an external party or completion already stops the work, so it is skipped.
+        """
+        prog = pane.get("progress")
+        if not isinstance(prog, dict) or self.cfg.no_progress_seconds <= 0:
+            return False
+        if int(prog.get("total") or 0) and int(prog.get("done") or 0) >= int(prog["total"]):
+            return False
+        if self.wait_for(task["id"])["reason"] in WAIT_SUPPRESSES_STALL:
+            return False
+        stalled = now - float(prog.get("moved_at") or now)
+        epoch = int(prog.get("epoch") or 0)
+        if (self.cfg.no_progress_alert_seconds > 0 and stalled >= self.cfg.no_progress_alert_seconds
+                and prog.get("alerted_epoch") != epoch):
+            prog["alerted_epoch"] = epoch
+            self.dirty = True
+            self.alert_owner(
+                f"no_progress:{task['id']}:{epoch}",
+                f"⚠️ {self.cfg.project}: task {task['id']} — its checklist has stayed at "
+                f"{prog.get('done')}/{prog.get('total')} for {int(stalled // 3600)} h while the agent works. "
+                f"This looks like a loop: ask the bot for a status or decide whether to go on.", now, 0.0)
+        wakes = int(prog.get("wakes") or 0)
+        if stalled < self.cfg.no_progress_seconds * (wakes + 1):
+            return False
+        prog["wakes"] = wakes + 1
+        self.dirty = True
+        log(f"watchdog no_progress task={task['id']} done={prog.get('done')}/{prog.get('total')} "
+            f"stalled={int(stalled)}s n={wakes + 1}")
+        self.request_wake(task, pane["last_seen"], "no_progress", now)
+        return True
 
     def _watch_task(self, task: dict[str, Any], pane: dict[str, Any], now: float) -> None:
         task_id = task["id"]
@@ -2021,6 +2120,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--stall-seconds", type=float, default=900.0)
     parser.add_argument("--working-no-output-seconds", type=float, default=1200.0)
     parser.add_argument("--watchdog-interval", type=float, default=60.0)
+    parser.add_argument("--no-progress-seconds", type=float, default=4 * 3600.0,
+                        help="wake the controller when the task's checklist has not moved this long (0 = off)")
+    parser.add_argument("--no-progress-alert-seconds", type=float, default=12 * 3600.0,
+                        help="tell the owner once when the checklist has not moved this long (0 = off)")
     parser.add_argument("--no-watchdog", action="store_true", help="disable stall/wait watchdog wakes")
     return apply_pipeline_config(parser.parse_args(argv))
 

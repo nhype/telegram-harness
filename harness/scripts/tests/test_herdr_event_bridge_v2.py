@@ -67,13 +67,15 @@ class Harness:
         self.auto_end = auto_end
         self.chat_format = options.pop("chat_format", "legacy")
         self.alerts = []
+        self.progress = {}  # task id -> (done, total) of its checklist
         self.delivery_seq = 0
         self.now = T0
         cfg = bridge.BridgeConfig(self.registry_path, self.state_path, self.db_path,
                                   project="ExampleApp", cwd_prefix=[CWD], **options)
         self.bridge = bridge.Bridge(cfg, list_panes=self.list_panes, read_pane=self.read_pane,
                                     agent_get=self.agent_get, deliver=self.deliver,
-                                    threaded=threaded, clock=lambda: self.now, alert=self.alerts.append)
+                                    threaded=threaded, clock=lambda: self.now, alert=self.alerts.append,
+                                    read_progress=lambda task: self.progress.get(task["id"]))
         assert self.bridge.prepare_subscription(self.now)
         self.bridge.mark_subscribed(self.now)
 
@@ -660,6 +662,82 @@ def test_owner_is_alerted_once_when_a_task_stays_stalled_after_two_wakes(tmp_pat
     assert len(h.alerts) == 1 and "a" in h.alerts[0] and "w5:p1" in h.alerts[0]
 
 
+def _busy_without_progress(tmp_path, **extra):
+    # Seen in production: an agent kept working (commits, diagnostics, fresh `scheduled` waits) for 14 h while
+    # its checklist stayed at 49/67, because the gate it chased was set by the host's disk.
+    until = bridge.iso_time(T0 + 30 * 3600)
+    h = Harness(tmp_path, tasks=[reg_task("a", "w5:p1", wait={"reason": "scheduled", "until": until},
+                                          **extra)], auto_end=True)
+    h.progress["a"] = (49, 67)
+    h.status("w5:p1", "working")
+    return h
+
+
+def test_no_progress_wakes_the_controller_every_4h_even_during_a_scheduled_wait(tmp_path):
+    h = _busy_without_progress(tmp_path)
+    h.advance(4 * 3600 - 120, step=30)
+    assert h.reasons() == []
+    h.advance(180, step=30)
+    assert h.reasons() == ["no_progress"]
+    assert h.sent[0]["event_id"].endswith(":working:no_progress1")
+    assert h.sent[0]["progress"]["done"] == 49 and h.sent[0]["progress"]["total"] == 67
+    assert h.sent[0]["progress"]["stalled_minutes"] >= 240
+    h.advance(4 * 3600, step=30)
+    assert h.reasons() == ["no_progress", "no_progress"]
+
+
+def test_owner_is_told_once_when_the_checklist_stays_still_12h(tmp_path):
+    h = _busy_without_progress(tmp_path)
+    h.advance(12 * 3600 - 120, step=60)
+    assert h.alerts == []
+    h.advance(180, step=60)
+    assert len(h.alerts) == 1 and "49/67" in h.alerts[0] and "a" in h.alerts[0]
+    h.advance(8 * 3600, step=60)
+    assert len(h.alerts) == 1
+
+
+def test_a_closed_checklist_item_restarts_the_no_progress_clock(tmp_path):
+    h = _busy_without_progress(tmp_path)
+    h.advance(3 * 3600, step=30)
+    h.progress["a"] = (50, 67)
+    h.advance(3 * 3600, step=30)  # 6 h in total, 3 h since the item closed
+    assert h.reasons() == []
+    h.advance(3600 + 60, step=30)
+    assert h.reasons() == ["no_progress"]
+    assert h.sent[0]["progress"]["done"] == 50
+
+
+def test_a_wait_on_the_owner_suppresses_no_progress(tmp_path):
+    h = Harness(tmp_path, tasks=[reg_task("a", "w5:p1", wait={"reason": "user_decision"})], auto_end=True)
+    h.progress["a"] = (49, 67)
+    h.status("w5:p1", "working")
+    h.advance(13 * 3600, step=60)
+    assert "no_progress" not in h.reasons() and h.alerts == []
+
+
+def test_no_progress_is_off_without_a_checklist_and_when_it_is_complete(tmp_path):
+    h = _busy_without_progress(tmp_path)
+    h.progress["a"] = None
+    h.bridge.state["panes"]["a"].pop("progress", None)
+    h.advance(13 * 3600, step=60)
+    assert h.reasons() == [] and h.alerts == []
+    h2 = _busy_without_progress(tmp_path / "b")
+    h2.progress["a"] = (67, 67)
+    h2.advance(13 * 3600, step=60)
+    assert h2.reasons() == [] and h2.alerts == []
+
+
+def test_checklist_progress_counts_openspec_task_boxes(tmp_path):
+    change = tmp_path / "openspec" / "changes" / "c1"
+    change.mkdir(parents=True)
+    (change / "tasks.md").write_text("## 1\n- [x] a\n- [ ] b\n  - [X] c\n* [ ] d\ntext - [x] not a box\n")
+    task = {"cwd": str(tmp_path), "change": "c1"}
+    assert bridge.checklist_progress(task) == (2, 4)
+    assert bridge.checklist_progress({"cwd": str(tmp_path), "change": "missing"}) is None
+    assert bridge.checklist_progress({"cwd": str(tmp_path), "change": "../c1"}) is None
+    assert bridge.checklist_progress({"cwd": "relative", "change": "c1"}) is None
+
+
 def test_other_tasks_are_delivered_while_one_is_backing_off(tmp_path):
     h = Harness(tmp_path, tasks=[no_continue("a", "w5:p1"), no_continue("b", "w5:p2")])
     h.responses = [bridge.DeliveryResult("error", "", "timeout")] * 3
@@ -692,8 +770,9 @@ def test_payload_contract_has_every_key_and_no_nulls(tmp_path):
     h.advance(21)
     payload = h.sent[0]
     assert set(payload) == {"event_type", "event_id", "observed_at", "status", "reason",
-                            "status_age_seconds", "coalesced", "hint", "wait", "task",
+                            "status_age_seconds", "coalesced", "hint", "wait", "progress", "task",
                             "task_fingerprint", "evidence", "telemetry"}
+    assert payload["progress"] == {"done": 0, "total": 0, "stalled_minutes": 0}
     assert set(payload["telemetry"]) == {"phase", "phase_started_at", "last_status",
                                          "last_status_duration_seconds", "phase_durations"}
     assert payload["hint"] == {"kind": "connection_error", "label": "Connection error"}

@@ -35,14 +35,21 @@
 - **Watchdog.** A task idle ≥ 15 min without a declared wait wakes the controller with `reason=stall`; an
   elapsed wait with `reason=wait_elapsed`; a working pane with no output for 20 min with
   `reason=working_no_output`.
+- **Loop guard.** Each event carries the change's checklist (`progress`: done/total and the minutes since
+  an item last closed). When no item closes for 4 h the controller is woken with `reason=no_progress`
+  (again every 4 h, even during a scheduled wait) to decide whether this is a long planned run or a loop.
+  For a loop it stops the attempts and asks you (`--no-progress-seconds`, 0 turns it off).
 - **Waits always end.** Every wait has an `until`. The registry adds one when the controller forgets:
   3 h for a question to the owner (`user_decision`), 1 h for an author waiting on something external.
   On that recheck the controller applies your answer, proceeds with its recommendation when the choice is
   reversible, or reminds you once.
 - **Owner alerts.** The bridge messages the owner itself, through the profile's Telegram bot and not
-  through Hermes, in two cases: events are being lost to delivery failures (once an hour), or a task is
-  still idle 90 min after two stall wakes did not move it (once per episode). Silence then means the
-  pipeline works.
+  through Hermes, in three cases:
+  - events are being lost to delivery failures (once an hour);
+  - a task is still idle 90 min after two stall wakes did not move it (once per episode);
+  - a task's checklist has not moved for 12 h (once per episode; `--no-progress-alert-seconds`).
+
+  Silence then means the pipeline works.
 - **Quiet waits** (`quiet: true`) hold the agent's short progress turns until `until`; they are only for
   automated runs that keep posting progress by themselves.
 
