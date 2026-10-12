@@ -31,7 +31,9 @@ routes, verifies and reports. It does not write product code itself.
 ## 1. Start (one chat turn, ≤10 tool calls)
 
 1. Classify the task (when unsure pick the higher one):
-   - `micro`: ≤4 static/UI/copy files, no backend/DB/money/auth/privacy/queues. Skip reviews.
+   - `micro`: ≤4 static/UI/copy files, no backend/DB/money/auth/privacy/queues. Skip reviews. Also
+     when the owner asks for it fast ("fast", "hotfix", "skip extra tests"), unless it touches
+     money, auth, migrations or privacy.
    - `standard`: contained backend or UI behavior, one API/read-model, no migration.
    - `high-risk`: payments, migrations, privacy/auth, queues/retry, delivery state, multi-service.
 2. Pick the pane: reuse the task's pane for a continuing change; otherwise create one:

@@ -116,11 +116,24 @@ owner's to answer.
 3. **Owner-only kinds:** money beyond what is authorized (top-ups, new paid services); destructive or
    irreversible production actions (deleting data, rotating a live secret); a user-visible product choice
    the brief does not settle; the owner's personal accounts, OAuth or `/login`.
+   A question is owner-only only when every way forward needs the owner. Take an option that needs
+   nothing from the owner at once:
+   - record a check as UNVERIFIED / NOT OBSERVED with its reason (an expired account, an external
+     service, an event that cannot be triggered);
+   - prove the behavior on tests or a test account instead of the owner's account;
+   - keep a reversible default;
+   - accept a few minutes of a user-visible side effect when there are no end users yet.
+
+   Record it (`decision` by `controller`) and tell the owner in one line: "Did <what>; say the word to
+   undo". Spending that follows from a rule the owner already set is not new spending. Such questions
+   asked late in the day typically wait all night, and the owner then picks exactly that option.
 4. **Asking never stops the task.** In the same run tell the agent to continue with everything the answer
    does not change; if the choice is reversible, also with your recommended option. Only the undecided part
    waits.
 5. **How to ask.** The final answer of this run IS the question, never [SILENT]. Format: what happened →
-   options with consequences → your recommendation → one question answerable with "yes" or a number. Set
+   options with consequences → your recommendation (the option that needs no owner action, when one
+   exists) → one question answerable with "yes" or a number. Plain words: no internal check codes or
+   design ids. Set
    `wait={reason:"user_decision", note:"<the question, ≤300 chars>"}`; the registry adds a 3 h recheck and
    records `open_question`. The owner's chat session sees open questions and routes the reply to the task.
    You may then move the wait to `scheduled` for the agent's own work: `open_question` stays until a
@@ -141,18 +154,20 @@ and reruns are not progress. A load-testing task once sat 14 h at 49/67, chasing
 host's disk could not meet. The agent had written that down early, but it made six more fix rounds before
 the owner was asked.
 
-1. **An unreachable target means ask the owner at once.** The agent's evidence may say a criterion is
-   limited by the environment (disk, CPU, host load, a provider quota, an external service) and not by
-   the code. Then stop every attempt at that criterion in the same run, and ask the owner («Owner
-   questions», step 5). Give these options and your recommendation:
-   - drop or relax the criterion for this environment;
-   - pay for a better environment (the price first);
-   - keep the work on the branch and stop.
+1. **An unreachable target stops at once.** The agent's evidence may say a criterion is limited by the
+   environment (disk, CPU, host load, a provider quota, an external service) and not by the code.
+   - Stop every attempt at that criterion in the same run.
+   - Record it as UNVERIFIED on this environment, with the evidence, in the change's verification notes.
+     It is then reference-only, not a blocker, and is never reported as a pass.
+   - Tell the agent to finish everything else.
+   - Tell the owner in one line, with the option to pay for a better environment (the price first).
 
-   Until the owner answers, the agent continues only with work that does not depend on the answer.
+   Only latency, throughput and capacity bounds become reference-only. Correctness and money guarantees
+   never do: a failure there stays a blocker whatever its cause.
 2. **Three strikes.** A gate may fail on three consecutive candidates, or after three fix attempts,
-   without its verdict improving (the same failing check, the same bucket). Treat that as rule 1. A
-   fourth attempt needs an owner decision or a new approach that you can name.
+   without its verdict improving (the same failing check, the same bucket). An environment-bound check
+   then follows rule 1. For a code-bound check, a fourth attempt needs a new approach that you can name,
+   or else ask the owner («Owner questions»).
 3. **Plan thresholds are not owner decisions.** The owner can change numbers that the agent froze in its
    own plan (SLOs, budgets, windows). Tell the owner that relaxing one contradicts their decision only
    when a `user` decision says so, and quote that decision.
@@ -178,6 +193,28 @@ the owner was asked.
   generate traffic", or allows "not observed"): ONE watch window of at most 1 h, then the agent records
   "not observed" as the task allows and the task goes on to Finalize and the merge into main. Never
   relaunch watchers in a loop; production logs keep the evidence when the event happens later.
+
+## Tests: one full run per change, one heavy job on the host
+
+Full suites set the pace of a task. When several tasks share one host, a suite that takes 25 min alone
+can take 70–100 min next to another suite or an image build. Repeats on unchanged code (after a late merge
+of main, a formatting-only edit, a "run it once more") can double a task's length.
+
+- While the agent iterates, only targeted tests run: the tests of the code and pages it touched. Do not
+  prompt for a full suite mid-work.
+- The prompt that sends the agent to its final checks gives this order: merge fresh `origin/main` (and
+  any peer branch it needs), run the formatter, commit, then run the full required checks ONCE on that
+  tree. That SHA is the one deployed.
+- Never ask for another full run on an unchanged tree, after a commit that touched only docs or OpenSpec
+  files, or to double-check a green result. If main moves again before the deploy, merge it and rerun
+  only the checks whose inputs changed.
+- **One heavy job on the host at a time** (full suites, image builds, load tests). Before you prompt a
+  heavy step, look at `herdr_task list`. If another task's `wait.note` says its heavy step is running,
+  this agent does light work first (notes, targeted tests, docs). Its heavy step goes after that task's
+  `wait.until`. Never stop a heavy run that is already going.
+- `execution_profile: micro`: the plan stays small, and any workstream the request did not ask for goes
+  back. Targeted tests while editing, then the single final run above. The checks stay, the repetitions
+  go.
 
 ## Independent acceptance (cheap, from facts)
 
