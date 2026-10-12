@@ -47,7 +47,8 @@
   through Hermes, in three cases:
   - events are being lost to delivery failures (once an hour);
   - a task is still idle 90 min after two stall wakes did not move it (once per episode);
-  - a task's checklist has not moved for 12 h (once per episode; `--no-progress-alert-seconds`).
+  - a task's checklist has not moved for 12 h (once per episode; `--no-progress-alert-seconds`), unless
+    the task has a question to you open.
 
   Silence then means the pipeline works.
 - **Quiet waits** (`quiet: true`) hold the agent's short progress turns until `until`; they are only for

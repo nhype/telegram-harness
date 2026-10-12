@@ -515,6 +515,7 @@ def registry_extras(raw: dict[str, Any]) -> dict[str, dict[str, Any]]:
         extras[task_id] = {
             "wait": normalize_wait(item.get("wait")),
             "parent_task_id": parent if parent and ID_RE.fullmatch(parent) else "",
+            "open_question": isinstance(item.get("open_question"), dict),
         }
     return extras
 
@@ -1906,8 +1907,10 @@ class Bridge:
             return False
         stalled = now - float(prog.get("moved_at") or now)
         epoch = int(prog.get("epoch") or 0)
+        # An open owner question already tells the owner the task waits on them; the wakes still run.
+        asked = bool(self.extras.get(task["id"], {}).get("open_question"))
         if (self.cfg.no_progress_alert_seconds > 0 and stalled >= self.cfg.no_progress_alert_seconds
-                and prog.get("alerted_epoch") != epoch):
+                and prog.get("alerted_epoch") != epoch and not asked):
             prog["alerted_epoch"] = epoch
             self.dirty = True
             self.alert_owner(

@@ -696,6 +696,14 @@ def test_owner_is_told_once_when_the_checklist_stays_still_12h(tmp_path):
     assert len(h.alerts) == 1
 
 
+def test_an_open_owner_question_keeps_the_wakes_but_not_the_owner_alert(tmp_path):
+    # A task with two unanswered owner questions once was moved to a `scheduled` wait; the
+    # owner already knows it waits on them, and the controller still reviews the loop every 4 h.
+    h = _busy_without_progress(tmp_path, open_question={"text": "Allow it?", "at": "2026-10-12T00:40:45Z"})
+    h.advance(13 * 3600, step=60)
+    assert h.reasons().count("no_progress") == 3 and h.alerts == []
+
+
 def test_a_closed_checklist_item_restarts_the_no_progress_clock(tmp_path):
     h = _busy_without_progress(tmp_path)
     h.advance(3 * 3600, step=30)

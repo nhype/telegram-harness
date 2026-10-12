@@ -55,7 +55,7 @@ RECHECK_SECONDS = {"user_decision": 3 * 3600, "external": 3600}
 OWNER_QUESTION_REMINDER = ("The owner has not been asked yet: your final answer must be this question "
                            "to the owner, not [SILENT].")
 # A question outlives the wait that asked it: the controller may move the wait to `scheduled` for the
-# agent's own work, and the owner's chat must still see the question until his decision is recorded.
+# agent's own work, and the owner's chat must still see the question until their decision is recorded.
 OWNER_SOURCES = ("user", "owner")
 POLICY_KEYS = (
     "allow_continue", "allow_tests", "allow_deploy",
