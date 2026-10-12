@@ -1904,6 +1904,14 @@ class Bridge:
         if int(prog.get("total") or 0) and int(prog.get("done") or 0) >= int(prog["total"]):
             return False
         if self.wait_for(task["id"])["reason"] in WAIT_SUPPRESSES_STALL:
+            # Time spent waiting on someone else is not a stall: the clock restarts when the wait ends.
+            if not prog.get("held"):
+                prog["held"] = True
+                self.dirty = True
+            return False
+        if prog.pop("held", None):
+            prog.update(moved_at=now, epoch=int(prog.get("epoch") or 0) + 1, wakes=0)
+            self.dirty = True
             return False
         stalled = now - float(prog.get("moved_at") or now)
         epoch = int(prog.get("epoch") or 0)

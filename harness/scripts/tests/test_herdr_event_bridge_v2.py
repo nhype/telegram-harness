@@ -723,6 +723,23 @@ def test_a_wait_on_the_owner_suppresses_no_progress(tmp_path):
     assert "no_progress" not in h.reasons() and h.alerts == []
 
 
+def test_time_spent_waiting_on_the_owner_is_not_a_stall(tmp_path):
+    # A task waited hours for the owner's answer; once the wait cleared, the bridge reported a
+    # long-still checklist as a likely loop and woke the controller several times in a row.
+    h = Harness(tmp_path, tasks=[reg_task("a", "w5:p1", wait={"reason": "user_decision"})], auto_end=True)
+    h.progress["a"] = (9, 11)
+    h.status("w5:p1", "working")
+    h.advance(13 * 3600, step=60)
+    h.tasks[0]["wait"] = {"reason": "none"}
+    h.write_registry()
+    h.advance(4 * 3600 - 120, step=60)
+    assert "no_progress" not in h.reasons() and h.alerts == []
+    h.advance(180, step=60)
+    assert h.reasons().count("no_progress") == 1 and h.sent[-1]["progress"]["stalled_minutes"] < 250
+    h.advance(8 * 3600, step=60)
+    assert len(h.alerts) == 1
+
+
 def test_no_progress_is_off_without_a_checklist_and_when_it_is_complete(tmp_path):
     h = _busy_without_progress(tmp_path)
     h.progress["a"] = None
