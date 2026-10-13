@@ -272,6 +272,31 @@ def _agent_state(agent: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+# Claude Code's fullscreen view keeps its own scroll position. Scrolled up, every read shows old output
+# above "N new messages ↓" and hides the newest reply, so a finished agent looks like it is still waiting.
+SCROLLED_UP_RE = re.compile(r"(?:\d+ new messages?|Jump to bottom)(?: \(click\)|:)")
+# Claude Code binds ctrl+end to scroll:bottom; herdr send-keys has no End key, so send the raw sequence.
+SCROLL_TO_BOTTOM = "\x1b[1;5F"
+
+
+def _read_agent(session: str, target: str, source: str, lines: int, timeout_ms: int) -> dict[str, Any]:
+    argv = _argv(session, "agent", "read", target, "--source", source, "--lines", str(lines))
+    result = _run(argv, timeout_ms)
+    text = result.get("data")
+    if not (isinstance(text, str) and SCROLLED_UP_RE.search(text[-1500:])):
+        return result
+    # Only at rest: a split escape sequence reads as Esc, which would interrupt a working agent.
+    agent, _ = _agent_info(session, target)
+    if _agent_state(agent)["agent_status"] not in {"idle", "done"}:
+        result["scrolled_up"] = True
+        return result
+    _run(_argv(session, "pane", "send-text", target, SCROLL_TO_BOTTOM), STATUS_TIMEOUT_MS)
+    time.sleep(0.5)
+    result = _run(argv, timeout_ms)
+    result["scrolled_to_bottom"] = True
+    return result
+
+
 @contextlib.contextmanager
 def _journal(timeout_s: float = 5.0):
     """Exclusive, bounded send journal. Yields the mutable state; saved on exit."""
@@ -584,7 +609,7 @@ def inspect(args: dict[str, Any], **_: Any) -> str:
             source = str(args.get("source") or "recent-unwrapped")
             if source not in SOURCES:
                 raise ValueError("invalid source")
-            return _run(_argv(session, "agent", "read", _clean_target(target), "--source", source, "--lines", str(lines)), timeout_ms)
+            return _read_agent(session, _clean_target(target), source, lines, timeout_ms)
         if action == "agent_explain":
             return _run(_argv(session, "agent", "explain", _clean_target(target), "--format", "json"), timeout_ms)
         if action == "agent_wait":

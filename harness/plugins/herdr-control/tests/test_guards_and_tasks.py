@@ -35,6 +35,7 @@ class FakeHerdr:
         self.on_prompt = None  # callable(target, text)
         self.clear_after_polls: int | None = 2
         self._polls_since_clear: int | None = None
+        self.screens: list[str] = []  # successive `agent read` outputs; the last one repeats
 
     def agent_json(self, target: str) -> str:
         info = self.agents[target]
@@ -72,6 +73,8 @@ class FakeHerdr:
             if self.on_prompt:
                 self.on_prompt(target, text)
             return done(0, before)
+        if (group, verb) == ("agent", "read") and self.screens:
+            return done(0, self.screens.pop(0) if len(self.screens) > 1 else self.screens[0])
         if (group, verb) == ("pane", "send-text"):
             return done(0, "")
         if verb == "send-keys":
@@ -429,3 +432,40 @@ def test_register_exposes_four_tools() -> None:
     assert {t["toolset"] for t in ctx.tools.values()} == {"herdr"}
     assert ctx.tools["herdr_task"]["schema"]["name"] == "herdr_task"
     assert "herdr" in ctx.commands
+
+
+# ---------------------------------------------------------------- agent_read scroll position
+
+SCROLLED = "● Switch is running in the background. Waiting for it.\n          4 new messages (click) ↓\n───\n❯\n───\n"
+BOTTOM = "● Done: 9/10, deployed and checked live.\n✻ Baked for 1m 19s\n───\n❯\n───\n"
+
+
+def read(module) -> dict:
+    return call(module, "inspect", action="agent_read", session="default", target="w5:pZ")
+
+
+def test_scrolled_up_idle_agent_is_scrolled_to_bottom_and_reread(env) -> None:
+    module, fake, _, _ = env
+    fake.agents["w5:pZ"]["status"] = "done"
+    fake.screens = [SCROLLED, BOTTOM]
+    result = read(module)
+    assert result["data"].startswith("● Done") and result["scrolled_to_bottom"] is True
+    sends = [c for c in fake.calls if c[4] == "send-text"]
+    assert len(sends) == 1 and sends[0][5:] == ["w5:pZ", "\x1b[1;5F"]
+
+
+def test_scrolled_up_working_agent_is_not_touched(env) -> None:
+    module, fake, _, _ = env
+    fake.agents["w5:pZ"]["status"] = "working"
+    fake.screens = [SCROLLED]
+    result = read(module)
+    assert result["scrolled_up"] is True and "scrolled_to_bottom" not in result
+    assert not [c for c in fake.calls if c[4] == "send-text"]
+
+
+def test_view_at_bottom_reads_once_without_keys(env) -> None:
+    module, fake, _, _ = env
+    fake.screens = [BOTTOM]
+    result = read(module)
+    assert result["data"].startswith("● Done") and "scrolled_to_bottom" not in result
+    assert [c[3:5] for c in fake.calls] == [["agent", "read"]]
