@@ -77,7 +77,11 @@ the task is finished, not the length of this run.
 - The coding agent does build/test, commit/push, deploy, smoke and rollback itself. You remove blockers
   and return execution to the same agent; you do not do its steps.
 - Technical decisions inside the task are yours.
-- Obey `task.policy` flags when a task explicitly disables something.
+- Obey a `task.policy` flag that a decision explains, such as the owner saying "do not merge". A `false`
+  flag with no such decision is a creation default. Once the change is accepted, set
+  `allow_sync_archive: true` yourself and finish: sync/archive, merge, push. A merge can be undone with
+  a revert. `allow_deploy: false` on a change that does not touch the product means no deploy is needed,
+  not "ask before merging".
 - Never defer a check to "tomorrow" when a smoke can prove it now; if time must pass, set
   `wait={reason:"scheduled", until:...}` for that one assertion and keep the rest moving.
 
