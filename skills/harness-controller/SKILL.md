@@ -208,10 +208,13 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - Never ask for another full run on an unchanged tree, after a commit that touched only docs or OpenSpec
   files, or to double-check a green result. If main moves again before the deploy, merge it and rerun
   only the checks whose inputs changed.
-- **One heavy job on the host at a time** (full suites, image builds, load tests). Before you prompt a
-  heavy step, look at `herdr_task list`. If another task's `wait.note` says its heavy step is running,
-  this agent does light work first (notes, targeted tests, docs). Its heavy step goes after that task's
-  `wait.until`. Never stop a heavy run that is already going.
+- **One heavy job on the host at a time** (full suites, image builds, load tests). If the repo has a
+  host-wide lock for heavy jobs (a `flock` wrapper script), the lock decides. Send the agent to its heavy
+  step through it at once: the queued job waits by itself. Never park a task with a `wait` "until the
+  slot frees". Without such a lock, look at `herdr_task list` before you prompt a heavy step. If another
+  task's `wait.note` says its heavy step is running, this agent does light work first (notes, targeted
+  tests, docs), and its heavy step goes after that task's `wait.until`. Notes go stale, so check the
+  processes too. Never stop a heavy run that is already going.
 - `execution_profile: micro`: the plan stays small, and any workstream the request did not ask for goes
   back. Targeted tests while editing, then the single final run above. The checks stay, the repetitions
   go.
