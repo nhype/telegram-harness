@@ -233,8 +233,10 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - Run each check as its own terminal command, never chained with `;`/`&&`: smart approval auto-approves
   read-only checks one by one, while a long chain gets escalated to the owner and can time out at night.
   Live page checks: `curl -s --max-time 10 <url> | grep -c '<marker>'`, one URL per command. Never use
-  inline `python -c` (always escalated): in a controller run nobody answers the prompt, so the run stalls
-  for the whole approval timeout and the check is lost. If a check is still blocked, do not ask the owner to
+  inline `python -c`, `bash -c`/`sh -c` or a shell loop (`for …; do`); all of them are always escalated.
+  In a controller run nobody answers the prompt, so the run stalls for the whole approval timeout and the
+  check is lost. A check that needs a loop or a script, such as comparing environment variables one by
+  one, goes to the agent as a prompt, and the agent runs it in its pane. If a check is still blocked, do not ask the owner to
   approve read-only acceptance: accept from the agent's recorded smoke evidence plus git/remote facts and
   note which check could not run.
 
