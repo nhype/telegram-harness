@@ -251,6 +251,27 @@ def test_hold_skips_repeat_without_new_work(tmp_path, capsys):
     assert len(h.sent) == 2
 
 
+def test_hold_does_not_swallow_work_that_began_while_the_event_was_in_flight(tmp_path):
+    # 2026-10-15: the agent resumed by itself 3 s before its `done` event reached the controller.
+    # The delivery took the new working epoch, so the agent's real `done` 5 min later counted as
+    # a repeat and was held until the stall watchdog fired 15 min later.
+    h = Harness(tmp_path, tasks=[no_continue()])
+
+    def resume_during_delivery(payload):
+        h.status("w5:p1", "working")
+        return bridge.DeliveryResult(ACCEPTED, "d1", "status=accepted")
+
+    h.responses.append(resume_during_delivery)
+    h.status("w5:p1", "done")
+    h.advance(21)
+    assert len(h.sent) == 1
+    h.finish("d1")
+    h.advance(300, step=5)
+    h.status("w5:p1", "done")
+    h.advance(21)
+    assert [p["status"] for p in h.sent] == ["done", "done"]
+
+
 def test_hold_expires_and_never_applies_to_blocked(tmp_path):
     h = Harness(tmp_path, tasks=[no_continue()], auto_end=True)
     h.status("w5:p1", "blocked")

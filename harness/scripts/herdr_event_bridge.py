@@ -1478,9 +1478,12 @@ class Bridge:
             sequence = pane.setdefault("reason_seq", {})
             sequence[reason] = int(sequence.get(reason) or 0) + 1
             event_id = f"{task_id}:{generation}:{status}:{reason}{sequence[reason]}"
+        # The epoch of the status being reported, not of delivery time: work that begins while the
+        # event is in flight must not make the agent's next `done` look like a repeat.
         self._enqueue({
             "task_id": task_id, "status": status, "reason": reason, "event_id": event_id,
             "queued_at": now, "next_at": now, "coalesced": coalesced, "attempts": 0, "rebuilt": False,
+            "working_epoch": int(pane.get("working_epoch") or 0),
         })
 
     def _enqueue(self, entry: dict[str, Any]) -> None:
@@ -1727,7 +1730,7 @@ class Bridge:
         pane["last_delivery"] = {
             "at": now, "status": entry["status"], "reason": entry["reason"],
             "event_id": entry["event_id"], "delivery_id": result.delivery_id,
-            "working_epoch": int(pane.get("working_epoch") or 0),
+            "working_epoch": int(entry.get("working_epoch", pane.get("working_epoch")) or 0),
         }
         pane["deferred"] = None
         log(f"delivered task={task_id} event={entry['event_id']} reason={entry['reason']} "
