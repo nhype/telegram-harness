@@ -332,8 +332,10 @@ failed, or made no progress. Otherwise set a wait and answer [SILENT]:
   shells: they end unseen and the agent waits forever. If it finished, do not wait for `until`; prompt
   now: `Teammate @<name> has already finished and will not wake up by itself. Resume it with SendMessage
   (it reads its background job output and reports its HEAD) or read that output yourself, then <next step>.`
-- When an agent starts a teammate, add to its next prompt: `A teammate does not end its turn while its
-  background jobs run: it waits for them with Monitor and reports only after that.`
+- When an agent starts a teammate, add to its next prompt: `A teammate can end its turn while its
+  background jobs still run (even with a Monitor of its own). Watch their output yourself with Monitor
+  and resume the teammate with SendMessage when they exit.` The agent then wakes on the exit itself; a
+  `scheduled` wait is enough.
 
 Every wait you set carries an `until`: the time you expect the blocker to clear, or now+60 min. The
 registry adds one to `user_decision` (3 h) and to an author's `external` (1 h) when you forget.
