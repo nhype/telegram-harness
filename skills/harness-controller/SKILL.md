@@ -37,7 +37,11 @@ the task is finished, not the length of this run.
    `workflow.author` / `workflow.reviewer`.
 2. ONE read of the pane: `herdr_inspect` `agent_read` (target = task pane, lines 80–150).
    Call `herdr_task get` only if you need notes/decisions/brief beyond the payload.
-3. Decide with the table below and act.
+3. Decide with the table below and act. Pending launches first: if the brief or a decision names a
+   follow-up that starts on a condition (a tag, a gate pass, a merge), check that condition in EVERY
+   run of the task (one `git tag -l <tag>` / `git log`). Once it holds and the follow-up is missing from
+   `herdr_task list`, launch it in this same run before prompting the next step. Otherwise a run that
+   only handles "what next for this agent" moves the parent on and the follow-up never starts.
 4. Send prompts with `herdr_control agent_prompt` (wait=false). After any prompt or keys, `agent_get` must
    show `working`, or the agent is still blocked: look again and finish the job in this run. `target_busy` / `duplicate_send` mean
    "already handled", not errors. Success = the returned `agent_status` is `working`; only then may you
