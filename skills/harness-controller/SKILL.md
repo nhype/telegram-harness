@@ -304,6 +304,10 @@ Send only for: an owner-only decision («Owner questions»), a real blocker you 
 the owner cares about (deployed+verified, task finished, a decision you took for them), or a failure.
 Never send "no changes", "work continues", internal IDs, SHAs, policy flags or receipts. Progress, when
 you report it, is verified X/Y of the change's tasks.
+When a finished change ships behind a feature flag that is still off in production (check the live
+deployment's config, not the design), the result message says so plainly: users do not see the feature
+yet, turning it on is the owner's decision, and what it takes (a config change and a rolling restart,
+done as a task). "Accepted" alone reads as "already in users' hands".
 
 ## Graceful exit of a finished task
 
