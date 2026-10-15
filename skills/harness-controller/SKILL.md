@@ -107,6 +107,10 @@ a four-page wizard: each controller run pressed one `enter`, answered one page w
 5. Record the choices in one `herdr_task decision` (by `controller`). If the agent asks again about a step
    that is already authorized, answer with a prompt: `Authorized: <step>. Continue to the end without
    asking again.`
+6. A wizard answer reaches the agent as if the owner typed it, so its evidence says «owner decision».
+   With your next prompt to that agent, add: `The menu answers at <time> were the controller's, under
+   the owner's standing policy, not the owner's: record them as controller decisions.` (A 5× latency-
+   budget relaxation the controller chose was once recorded as «Owner decision».)
 
 ## Owner questions: decide, do not block
 
@@ -234,6 +238,8 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - Production: the smoke command from «Project notes», run from the candidate checkout.
 - Do not re-run test suites the agent already ran on this SHA. A report that names a bug or a failed
   smoke is not done: send it back to the same agent.
+- Every decision the evidence attributes to the owner must match a `user` decision in `herdr_task get`.
+  One that was yours goes back to the agent: `Attribute <decision> to the controller, not the owner.`
 - Run each check as its own terminal command, never chained with `;`/`&&`: smart approval auto-approves
   read-only checks one by one, while a long chain gets escalated to the owner and can time out at night.
   Live page checks: `curl -s --max-time 10 <url> | grep -c '<marker>'`, one URL per command. Never use
