@@ -73,6 +73,7 @@ the task is finished, not the length of this run.
 | `reason=working_no_output` | If the tail shows a hang: `esc`, then the resume prompt; else [SILENT]. |
 | `reason=no_progress`, or a gate fails again | «Loops» below. |
 | Pane dead / task gone | [SILENT]. |
+| `[IMPORTANT: Background process … completed]` in the owner's chat | Your own background command finished; the owner did not write. Use its output in the task it served, then [SILENT]. Message the owner only if the result changes what you told them (a failure that blocks their request). A routine step ("index refreshed") is never a message. |
 
 ## Owner policy (standing rules — do not ask again)
 
