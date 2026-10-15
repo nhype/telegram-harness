@@ -327,6 +327,13 @@ failed, or made no progress. Otherwise set a wait and answer [SILENT]:
   next. `quiet` would hold it until `until` and leave the agent idle.
 - Only an automated run that keeps posting progress turns by itself gets
   `wait={reason:"scheduled", until:<now+60 min>, quiet:true}`.
+- The agent waits on a teammate or subagent ("lane X is still running", "waiting for its report"): look
+  for `Teammate @<name> finished` in the pane. A finished teammate is NEVER woken by its own background
+  shells: they end unseen and the agent waits forever. If it finished, do not wait for `until`; prompt
+  now: `Teammate @<name> has already finished and will not wake up by itself. Resume it with SendMessage
+  (it reads its background job output and reports its HEAD) or read that output yourself, then <next step>.`
+- When an agent starts a teammate, add to its next prompt: `A teammate does not end its turn while its
+  background jobs run: it waits for them with Monitor and reports only after that.`
 
 Every wait you set carries an `until`: the time you expect the blocker to clear, or now+60 min. The
 registry adds one to `user_decision` (3 h) and to an author's `external` (1 h) when you forget.
