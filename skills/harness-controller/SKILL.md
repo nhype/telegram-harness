@@ -272,9 +272,13 @@ git -C {{REPO}} push origin main
 
 If `status -s` shows tracked edits, they are usually your own owner-requested docs/spec work from the
 owner chat (check it), not a stranger's: set a 30-min wait and merge after that work is committed.
-Never call them foreign to the owner, and never stash, reset or commit them from a task run. Your own
-edits to the repo from the owner chat go on a branch in a separate worktree, merged into main when
-done, so the main checkout stays clean for integration.
+Never call them foreign to the owner, and never stash or reset them in place. Your own edits to the
+repo from the owner chat go on a branch in a separate worktree, merged into main when done, so the main
+checkout stays clean for integration. If the owner already approved committing such edits and they sat
+unchanged for 2 h (file mtimes) with the owner chat idle, move them yourself: `git diff HEAD --binary`
+to a patch, `git worktree add -b docs/<topic>` from `origin/main`, `git apply --index`, then compare
+the sha256 of the patch with that of `diff --cached`; run the checks they come with, commit, push,
+merge. Only then clean the main checkout, and tell the owner in one line which commit holds the edits.
 
 On conflict: `git -C {{REPO}} merge --abort`, then prompt the agent:
 `Merge fresh origin/main into your branch, resolve conflicts, run the tests, push. Reply in ≤10 lines.`
