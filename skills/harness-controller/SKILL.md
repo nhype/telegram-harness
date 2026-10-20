@@ -185,6 +185,8 @@ the owner was asked.
    own plan (SLOs, budgets, windows). Tell the owner that relaxing one contradicts their decision only
    when a `user` decision says so, and quote that decision.
 4. **On `reason=no_progress`,** read `progress`, the pane and the change's verification notes:
+   - the notes already record evidence for items that are still unchecked → tell the agent to tick now
+     each one whose Verify holds on the current tree; the counter is what this watchdog and the owner see;
    - a planned long run with a known end (a benchmark series, a full suite) → set `wait.until` to that
      end and answer [SILENT];
    - the same failing gate again, or an environment limit → apply rules 1–2 now;
