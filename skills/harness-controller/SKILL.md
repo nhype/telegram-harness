@@ -318,6 +318,10 @@ Send only for: an owner-only decision («Owner questions»), a real blocker you 
 the owner cares about (deployed+verified, task finished, a decision you took for them), or a failure.
 Never send "no changes", "work continues", internal IDs, SHAs, policy flags or receipts. Progress, when
 you report it, is verified X/Y of the change's tasks.
+A message about a problem (a stall, a finding, a red check) ends with one line on where things stand:
+whether the work goes on, what the agent does next, and whether the owner has to do anything ("Work
+continues: the agent is adding a checksum check, nothing needed from you"). A problem you are handling
+yourself is not a "blocker". A bare "blocker recorded" makes the owner ask whether the work has stopped.
 When a finished change ships behind a feature flag that is still off in production (check the live
 deployment's config, not the design), the result message says so plainly: users do not see the feature
 yet, turning it on is the owner's decision, and what it takes (a config change and a rolling restart,
