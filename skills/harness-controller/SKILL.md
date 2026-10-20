@@ -223,6 +223,10 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - Never ask for another full run on an unchanged tree, after a commit that touched only docs or OpenSpec
   files, or to double-check a green result. If main moves again before the deploy, merge it and rerun
   only the checks whose inputs changed.
+- While a long check runs, the agent neither commits nor edits files in that worktree. A run whose tree
+  changed under it proves nothing about the final tree, and a runner that keys its result on the commit
+  throws it away. Notes wait until the run ends. A docs commit made one minute into an hour-long browser
+  run costs the whole hour.
 - **One heavy job on the host at a time** (full suites, image builds, load tests, and a "targeted" UI or
   browser run that spans many files or several workers). If the repo has a
   host-wide lock for heavy jobs (a `flock` wrapper script), the lock decides. Send the agent to its heavy
