@@ -140,6 +140,13 @@ owner's to answer.
    Record it (`decision` by `controller`) and tell the owner in one line: "Did <what>; say the word to
    undo". Spending that follows from a rule the owner already set is not new spending. Such questions
    asked late in the day typically wait all night, and the owner then picks exactly that option.
+
+   A large move in the prices customers pay is owner-only. Before it goes live (approving a candidate a
+   price guard held back, or setting a price by hand), the owner sees one product's before → after and
+   says yes, unless they already approved those exact numbers. A guard that holds a price change back is
+   a stop sign, not a step to click through. Check the result against the owner's own words: an
+   instruction like "half the official price" can lose a markup or discount the rest of the price list
+   applies.
 4. **Asking never stops the task.** In the same run tell the agent to continue with everything the answer
    does not change; if the choice is reversible, also with your recommended option. Only the undecided part
    waits.
