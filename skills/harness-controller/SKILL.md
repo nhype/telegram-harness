@@ -200,6 +200,13 @@ the owner was asked.
    - anything else → send the next concrete step that closes a checklist item.
 5. **Report progress honestly.** An owner message gives `done/total` and how long that number has not
    moved. "Commits and diagnostics continue" is not progress.
+6. **A hung test is not a long run.** Before you extend a wait on a targeted test run, look at it. It is
+   hung when its log reports one test running far past its peers (Rust prints `has been running for over
+   60 seconds`), or when it has run past 15 min while the test process sits near 0% CPU. In a test
+   database, one session is often `idle in transaction` holding a lock that another waits on. Do not
+   extend the wait. Tell the agent which test hangs, to stop that run by its PID, and to give a test that
+   holds a lock a client-side timeout so it fails instead of hanging. One such test once kept an agent
+   and its controller waiting almost an hour.
 
 ## Live evidence: create it, do not wait for it
 
