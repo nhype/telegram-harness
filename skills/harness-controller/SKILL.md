@@ -235,6 +235,11 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   task's `wait.note` says its heavy step is running, this agent does light work first (notes, targeted
   tests, docs), and its heavy step goes after that task's `wait.until`. Notes go stale, so check the
   processes too. Never stop a heavy run that is already going.
+- **Measurement runs go last in the queue.** A heavy run that only measures (a before/after timing, a
+  benchmark, a warm-up) is queued only when no other task waits for the heavy slot and no other task's
+  final check, image build or deploy check falls due before the run would end. Until then that agent
+  does its light work. A measurement that has yielded for 2 h queues normally. A deliverable the user is
+  waiting for should not sit behind an hour-long benchmark.
 - **No disk I/O throttling on a host that also runs production.** No `--device-write-iops`,
   `--device-*-bps` or io.max on a test container when a production database shares that disk: a
   throttled writer holds the filesystem journal, and every production commit waits behind it. To model
