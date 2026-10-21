@@ -73,6 +73,8 @@ RETRY_BACKOFF = (5, 15, 45, 120, 300)
 SHORT_TURN_SECONDS = 60.0
 MAX_WEBHOOK_TIMEOUT = 45
 MAX_RECENT_WORK = 8
+# Status log per task, for a report of where the task's time went (agent work vs. waits).
+MAX_TRANSITIONS = 400
 MAX_SOCKET_BUFFER = 4 * 1024 * 1024
 NO_HINT = {"kind": "none", "label": ""}
 NO_WAIT = {"reason": "none", "until": ""}
@@ -664,6 +666,9 @@ def record_status(
         pane["phase"] = phase
         pane["phase_started_at"] = observed_at
 
+    transitions = list(pane.get("transitions") or [])
+    transitions.append({"status": status, "at": now, "phase": phase})
+    pane["transitions"] = transitions[-MAX_TRANSITIONS:]
     pane["prev_status"] = previous
     pane["last_seen"] = status
     pane["status_since"] = now

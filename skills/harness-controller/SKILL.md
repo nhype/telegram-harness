@@ -269,6 +269,11 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - `execution_profile: micro`: the plan stays small, and any workstream the request did not ask for goes
   back. Targeted tests while editing, then the single final run above. The checks stay, the repetitions
   go.
+  - Artifacts stay compact too: a short proposal, specs only for the requirement that changes, ≤8
+    tasks, and a verification table of command | result | commit.
+  - Raw test output stays outside the repository; the table cites where it lives.
+  - (A one-paragraph copy removal once committed 3,300 lines, ~3,100 of them change documents and raw
+    logs.)
 
 ## Independent acceptance (cheap, from facts)
 

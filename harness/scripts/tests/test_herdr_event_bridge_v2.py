@@ -171,6 +171,19 @@ def test_idle_flap_produces_single_wake(tmp_path):
     assert len(h.sent) == 1
 
 
+def test_status_changes_are_logged_for_the_flow_report(tmp_path):
+    h = Harness(tmp_path)
+    start = len(h.pane().get("transitions") or [])
+    h.status("w5:p1", "idle")
+    h.advance(10)
+    h.status("w5:p1", "idle")  # unchanged: no entry
+    h.status("w5:p1", "working")
+    logged = h.pane()["transitions"][start:]
+    assert [t["status"] for t in logged] == ["idle", "working"]
+    assert logged[1]["at"] - logged[0]["at"] == 10
+    assert all(t["phase"] for t in logged)
+
+
 def test_working_cancels_scheduled_wake(tmp_path):
     h = Harness(tmp_path)
     h.status("w5:p1", "idle")
