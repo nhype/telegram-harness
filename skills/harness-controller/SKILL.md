@@ -230,6 +230,12 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - Never ask for another full run on an unchanged tree, after a commit that touched only docs or OpenSpec
   files, or to double-check a green result. If main moves again before the deploy, merge it and rerun
   only the checks whose inputs changed.
+- Except when the new main commits touch only files the deployed artifact does not ship (docs, OpenSpec,
+  tests and test tooling; check against the image's build context or package manifest). Then the agent
+  deploys the commit it already checked and merges main at finalize: production cannot drop files it
+  never contained. If that merge brings test or test-tooling changes, the agent runs the suites they
+  touch once on the merged tree before the main merge. Merging a test-runner change before the deploy
+  would re-run every final check and the image build for nothing that ships.
 - While a long check runs, the agent neither commits nor edits files in that worktree. A run whose tree
   changed under it proves nothing about the final tree, and a runner that keys its result on the commit
   throws it away. Notes wait until the run ends. A docs commit made one minute into an hour-long browser
@@ -360,7 +366,8 @@ A successful `herdr_task update` returns the changed fields — do not re-read t
 
 - Before a deploy prompt, check the other enabled tasks (`herdr_task list`). Only one task deploys at a
   time. If another task's branch was merged into main after this branch was cut, tell the agent to merge
-  origin/main into its branch before deploying, so production never drops peer commits.
+  origin/main into its branch before deploying, so production never drops peer commits. Commits that
+  touch only files the deployed artifact does not ship wait for finalize (see Tests).
 - If another task runs a long batch job on the same services, tell the deploying agent to pause it first
   and resume it after the live check, or schedule the deploy after the batch.
 - A task that needs a peer's code does not wait for the peer's merge into main when that code is already
