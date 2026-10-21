@@ -383,6 +383,16 @@ A successful `herdr_task update` returns the changed fields — do not re-read t
   answer" is answered by you in the same run, never by the owner and never by a wait. Check
   `herdr_task list` and `herdr agent list` for another task that is deploying or measuring. If there is
   none, tell the agent to proceed. If there is one, give it that task's `wait.until`.
+- **Production compose commands name their services.** A service may run with an extra compose overlay
+  that a deploy kit does not carry, such as a database with its backup and WAL-archiving settings. A
+  bare `docker compose up -d` with the deploy overlay recreates that service without it: archiving
+  stops, and backups fail quietly. Every prompt that lets an agent run compose on production says: name
+  the services, pass `--no-deps`, and never touch the database. After any production compose action,
+  and whenever a backup check fails, compare the database container's image and archive settings with
+  the documented ones. If they differ, restore the overlay once no deploy is mid-switch. That is a
+  technical, reversible fix and yours to order, not an owner question. Then tell the owner how long
+  archiving was off. One such teardown script once left a production database without offsite archiving
+  for more than 7 h.
 
 ## Long automated runs
 
