@@ -235,6 +235,12 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   task's `wait.note` says its heavy step is running, this agent does light work first (notes, targeted
   tests, docs), and its heavy step goes after that task's `wait.until`. Notes go stale, so check the
   processes too. Never stop a heavy run that is already going.
+- **No disk I/O throttling on a host that also runs production.** No `--device-write-iops`,
+  `--device-*-bps` or io.max on a test container when a production database shares that disk: a
+  throttled writer holds the filesystem journal, and every production commit waits behind it. To model
+  slow storage, slow the client under test (a fake server, an injected delay), never the disk. An
+  offline repro at 20 write IOPS once gave a production database four minutes of lock and statement
+  timeouts.
 - `execution_profile: micro`: the plan stays small, and any workstream the request did not ask for goes
   back. Targeted tests while editing, then the single final run above. The checks stay, the repetitions
   go.
