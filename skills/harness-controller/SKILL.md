@@ -396,6 +396,12 @@ A successful `herdr_task update` returns the changed fields — do not re-read t
   and resume it after the live check, or schedule the deploy after the batch.
 - A task that needs a peer's code does not wait for the peer's merge into main when that code is already
   pushed: tell the agent to merge the peer's pushed branch and continue.
+- **A scripted deploy beats a hand-written one.** If the project ships a documented deploy script (plan
+  check, switch, built-in rollback), the deploy prompt names it and its runbook section, and the agent runs
+  it as documented. The agent does not write its own switch or rollback script. It reports the exit code
+  and the evidence directory. A case the script refuses, such as a schema migration, follows the
+  runbook's manual procedure. (Hand-written per-task procedures once repeated an old bug: a second replica
+  recreated before the edge proxy stopped marking the first one down gave public 502s.)
 - A deploy step that tells the agent to "announce the switch to the other sessions and wait for the
   answer" is answered by you in the same run, never by the owner and never by a wait. Check
   `herdr_task list` and `herdr agent list` for another task that is deploying or measuring. If there is
