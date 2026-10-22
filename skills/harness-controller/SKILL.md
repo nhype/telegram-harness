@@ -255,6 +255,9 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   task's `wait.note` says its heavy step is running, this agent does light work first (notes, targeted
   tests, docs), and its heavy step goes after that task's `wait.until`. Notes go stale, so check the
   processes too. Never stop a heavy run that is already going.
+  Light steps (spec validation, lint, type checks, targeted tests) never take the heavy slot, also not
+  inside a script that chains several gates: it runs them at once and queues only the heavy ones, so a
+  light red shows up before the task waits for its heavy turn.
 - **Measurement runs go last in the queue.** A heavy run that only measures (a before/after timing, a
   benchmark, a warm-up) is queued only when no other task waits for the heavy slot and no other task's
   final check, image build or deploy check falls due before the run would end. Until then that agent
