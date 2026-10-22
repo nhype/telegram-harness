@@ -258,6 +258,9 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   Light steps (spec validation, lint, type checks, targeted tests) never take the heavy slot, also not
   inside a script that chains several gates: it runs them at once and queues only the heavy ones, so a
   light red shows up before the task waits for its heavy turn.
+  A production window waits for the same slot, so tests can hold up a deploy. If the lock script has a
+  priority mode, only production windows use it. Ordinary waiters yield to them, and a running job is
+  never stopped.
 - **Measurement runs go last in the queue.** A heavy run that only measures (a before/after timing, a
   benchmark, a warm-up) is queued only when no other task waits for the heavy slot and no other task's
   final check, image build or deploy check falls due before the run would end. Until then that agent
