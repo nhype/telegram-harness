@@ -280,6 +280,12 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - `git -C <cwd> log -1 --oneline`, `git -C <cwd> status -s`, `git -C <cwd> rev-parse HEAD @{u}`.
 - `openspec list` in `<cwd>` (N/M tasks for the change).
 - Production: the smoke command from «Project notes», run from the candidate checkout.
+- A live check that costs money (paid API calls, real transactions) when the brief forbids that spend,
+  handled by what the diff touches:
+  - **It does not reach the paid path** (UI copy, styles, docs, admin views): the skipped check is
+    the recorded exception, not an owner question. Accept on the free checks and finish.
+  - **It does reach the paid path:** ask the owner once, before the deploy. Never ask after acceptance.
+  (A copy-only change once sat waiting for the owner after its deploy over exactly this.)
 - Do not re-run test suites the agent already ran on this SHA. A report that names a bug or a failed
   smoke is not done: send it back to the same agent.
 - Every decision the evidence attributes to the owner must match a `user` decision in `herdr_task get`.
