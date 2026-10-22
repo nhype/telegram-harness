@@ -40,6 +40,7 @@
   (again every 4 h, even during a scheduled wait) to decide whether this is a long planned run or a loop.
   For a loop it stops the attempts and asks you (`--no-progress-seconds`, 0 turns it off). Time spent
   waiting on you, an outside party or completion does not count: the clock restarts when that wait ends.
+  Time a task's process spends blocked on the host's heavy-job queue (`queue_locks`) does not count either.
 - **Waits always end.** Every wait has an `until`. The registry adds one when the controller forgets:
   3 h for a question to the owner (`user_decision`), 1 h for an author waiting on something external.
   On that recheck the controller applies your answer, proceeds with its recommendation when the choice is
