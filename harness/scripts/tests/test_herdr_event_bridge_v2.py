@@ -68,6 +68,7 @@ class Harness:
         self.chat_format = options.pop("chat_format", "legacy")
         self.alerts = []
         self.progress = {}  # task id -> (done, total) of its checklist
+        self.queued = []  # cwds of processes blocked on the heavy queue
         self.delivery_seq = 0
         self.now = T0
         cfg = bridge.BridgeConfig(self.registry_path, self.state_path, self.db_path,
@@ -75,7 +76,8 @@ class Harness:
         self.bridge = bridge.Bridge(cfg, list_panes=self.list_panes, read_pane=self.read_pane,
                                     agent_get=self.agent_get, deliver=self.deliver,
                                     threaded=threaded, clock=lambda: self.now, alert=self.alerts.append,
-                                    read_progress=lambda task: self.progress.get(task["id"]))
+                                    read_progress=lambda task: self.progress.get(task["id"]),
+                                    queue_waiters=lambda: list(self.queued))
         assert self.bridge.prepare_subscription(self.now)
         self.bridge.mark_subscribed(self.now)
 
@@ -772,6 +774,43 @@ def test_time_spent_waiting_on_the_owner_is_not_a_stall(tmp_path):
     assert h.reasons().count("no_progress") == 1 and h.sent[-1]["progress"]["stalled_minutes"] < 250
     h.advance(8 * 3600, step=60)
     assert len(h.alerts) == 1
+
+
+def test_time_blocked_on_the_heavy_queue_is_not_a_stall(tmp_path):
+    # A task once waited about 5 h in the host's heavy-job queue for three gates; the owner was
+    # told its checklist had been still for 6 h and it looked like a loop.
+    h = _busy_without_progress(tmp_path)
+    h.queued = [CWD + "/sub"]
+    h.advance(10 * 3600, step=60)
+    assert h.reasons() == [] and h.alerts == []
+    h.queued = ["/srv/other-app"]
+    h.advance(4 * 3600 - 120, step=60)
+    assert h.reasons() == []
+    h.advance(180, step=60)
+    assert h.reasons() == ["no_progress"] and h.sent[0]["progress"]["stalled_minutes"] < 250
+    h.advance(8 * 3600, step=60)
+    assert len(h.alerts) == 1 and "not counting 9 h in the heavy-job queue" in h.alerts[0]
+
+
+def test_queue_waiters_are_the_blocked_lines_of_proc_locks(tmp_path):
+    lock, other = tmp_path / "heavy.lock", tmp_path / "other.lock"
+    lock.touch()
+    other.touch()
+
+    def key(path):
+        st = path.stat()
+        return f"{bridge.os.major(st.st_dev):02x}:{bridge.os.minor(st.st_dev):02x}:{st.st_ino}"
+
+    pid = bridge.os.getpid()
+    locks = tmp_path / "locks"
+    locks.write_text(
+        f"43: FLOCK  ADVISORY  WRITE {pid} {key(lock)} 0 EOF\n"
+        f"43: -> FLOCK  ADVISORY  WRITE {pid} {key(lock)} 0 EOF\n"
+        f"44: -> FLOCK  ADVISORY  WRITE {pid} {key(other)} 0 EOF\n"
+        f"45: -> OFDLCK ADVISORY  READ -1 {key(lock)} 0 EOF\n")
+    assert bridge.queue_waiter_cwds([str(lock)], str(locks)) == [bridge.os.getcwd()]
+    assert bridge.queue_waiter_cwds([str(tmp_path / "absent")], str(locks)) == []
+    assert bridge.queue_waiter_cwds([str(lock)], str(tmp_path / "no-locks")) == []
 
 
 def test_no_progress_is_off_without_a_checklist_and_when_it_is_complete(tmp_path):

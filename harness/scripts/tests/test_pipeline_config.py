@@ -28,7 +28,8 @@ def test_load_valid_config(tmp_path):
 @pytest.mark.parametrize("broken", [
     "{not json", [], {**MP, "project": ""}, {k: v for k, v in MP.items() if k != "route"},
     {**MP, "cwd_prefixes": []}, {**MP, "cwd_prefixes": ["relative/path"]},
-    {**MP, "cwd_prefixes": "/srv/demo-api"},
+    {**MP, "cwd_prefixes": "/srv/demo-api"}, {**MP, "queue_locks": "/run/lock/heavy.lock"},
+    {**MP, "queue_locks": ["relative.lock"]},
 ])
 def test_invalid_config_is_rejected(tmp_path, broken):
     assert bridge.load_pipeline_config(write(tmp_path, broken)) is None
@@ -49,6 +50,13 @@ def test_explicit_flags_override_config(tmp_path):
                                      "--cwd-prefix", "/srv/other", "--webhook", "other-route"])
     assert (args.project, args.cwd_prefix, args.webhook) == ("Other", ["/srv/other"], "other-route")
     assert args.sibling_prefix is True
+
+
+def test_config_supplies_queue_locks(tmp_path):
+    args = bridge.parse_args(BASE + ["--config", str(write(tmp_path, {**MP, "queue_locks": ["/run/lock/heavy.lock"]}))])
+    assert args.queue_lock == ["/run/lock/heavy.lock"]
+    assert bridge.BridgeConfig.from_args(args).queue_locks == ["/run/lock/heavy.lock"]
+    assert bridge.parse_args(BASE + ["--config", str(write(tmp_path, MP))]).queue_lock == []
 
 
 def test_without_config_defaults_are_unchanged():

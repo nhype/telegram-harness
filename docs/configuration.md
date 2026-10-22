@@ -15,6 +15,7 @@ without a valid file the plugins and the route script stay inactive for that pro
 | `chat_id` | `"123456789"` | Telegram chat that receives controller messages and approval prompts. |
 | `owner_user_id` | `"123456789"` | The only Telegram user whose approvals and answers count. |
 | `approval_tag` | `"[Acme Herdr approval]"` | Prefix of approval prompts. |
+| `queue_locks` | `["/run/lock/heavy.lock"]` | Optional. Lock files of a host-wide heavy-job queue: time a task's process waits blocked on one does not count toward the no-progress watchdog (`--queue-lock`). |
 
 See [`templates/herdr-pipeline.json.example`](../templates/herdr-pipeline.json.example).
 

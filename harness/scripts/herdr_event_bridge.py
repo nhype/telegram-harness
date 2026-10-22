@@ -116,7 +116,43 @@ def load_pipeline_config(path: Path | str) -> dict[str, Any] | None:
     if (not isinstance(prefixes, list) or not prefixes
             or not all(isinstance(p, str) and p.startswith("/") for p in prefixes)):
         return None
+    locks = data.get("queue_locks", [])
+    if not isinstance(locks, list) or not all(isinstance(p, str) and p.startswith("/") for p in locks):
+        return None
     return {**data, "sibling_prefix": bool(data.get("sibling_prefix", False))}
+
+
+def queue_waiter_cwds(lock_paths: list[str], locks_file: str = "/proc/locks") -> list[str]:
+    """Working directories of the processes blocked on one of the host queue's lock files.
+
+    A blocked waiter is a `->` line of /proc/locks; the holder, whose job runs, is not one.
+    """
+    keys = set()
+    for path in lock_paths:
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue
+        keys.add(f"{os.major(st.st_dev):02x}:{os.minor(st.st_dev):02x}:{st.st_ino}")
+    if not keys:
+        return []
+    try:
+        lines = Path(locks_file).read_text(encoding="ascii", errors="replace").splitlines()
+    except OSError:
+        return []
+    cwds = []
+    for line in lines:
+        fields = line.split()
+        if "->" not in fields:
+            continue
+        rest = fields[fields.index("->") + 1:]  # type, mode, access, pid, dev:inode, start, end
+        if len(rest) < 5 or rest[4] not in keys or not rest[3].isdigit():
+            continue
+        try:
+            cwds.append(os.readlink(f"/proc/{rest[3]}/cwd").removesuffix(" (deleted)"))
+        except OSError:
+            continue
+    return cwds
 
 
 def merge_discovered_panes(
@@ -1084,6 +1120,9 @@ class BridgeConfig:
         # (again at each further multiple), and tell the owner once at the alert threshold.
         "no_progress_seconds": 4 * 3600.0,
         "no_progress_alert_seconds": 12 * 3600.0,
+        # Lock files of the host's heavy-job queue: time a task's process is blocked on one is
+        # not a stall (the queue serves one job at a time; a gate may wait hours for its turn).
+        "queue_locks": (),
         "topology_min_interval": 5.0,
         "pane_refresh_seconds": 60.0,
     }
@@ -1098,6 +1137,7 @@ class BridgeConfig:
         self.state = Path(state)
         self.state_db = Path(state_db)
         self.cwd_prefix = list(self.cwd_prefix or [])
+        self.queue_locks = list(self.queue_locks or [])
         self.webhook_timeout = max(1, min(int(self.webhook_timeout), MAX_WEBHOOK_TIMEOUT))
         self.loop_interval = max(0.05, min(float(self.loop_interval), 1.0))
 
@@ -1134,6 +1174,7 @@ class BridgeConfig:
             watchdog_interval=args.watchdog_interval,
             no_progress_seconds=args.no_progress_seconds,
             no_progress_alert_seconds=args.no_progress_alert_seconds,
+            queue_locks=list(getattr(args, "queue_lock", None) or []),
         )
 
 
@@ -1193,9 +1234,12 @@ class Bridge:
         clock: Callable[[], float] = time.time,
         alert: Callable[[str], Any] | None = None,
         read_progress: Callable[[dict[str, Any]], tuple[int, int] | None] | None = None,
+        queue_waiters: Callable[[], list[str]] | None = None,
     ) -> None:
         self.cfg = cfg
         self._read_progress = read_progress or checklist_progress
+        self._queue_waiters = queue_waiters or (lambda: queue_waiter_cwds(cfg.queue_locks))
+        self._queue_checked: dict[str, float] = {}
         if alert is None and cfg.alert_chat and cfg.alert_env:
             def alert(text: str) -> None:  # off the event loop: Telegram may be slow
                 threading.Thread(target=send_owner_alert, args=(cfg.alert_env, cfg.alert_chat, text),
@@ -1857,6 +1901,10 @@ class Bridge:
         if self.last_watchdog is not None and now - self.last_watchdog < self.cfg.watchdog_interval:
             return
         self.last_watchdog = now
+        try:
+            queued = self._queue_waiters()
+        except Exception:  # noqa: BLE001 - the queue view is advisory
+            queued = []
         for task_id, task in self.registered.items():
             if task_id not in self.tasks or task_id.startswith("auto:"):
                 continue
@@ -1868,6 +1916,7 @@ class Bridge:
             if not pane or not pane.get("last_seen") or pane.get("wake") or pane.get("deferred"):
                 continue
             self._track_progress(task, pane, now)
+            self._discount_queue_wait(task, pane, now, queued)
             if self._watch_progress(task, pane, now):
                 continue
             self._watch_task(task, pane, now)
@@ -1891,6 +1940,27 @@ class Bridge:
         elif prog.get("total") != total:
             prog["total"] = total
             self.dirty = True
+
+    def _discount_queue_wait(self, task: dict[str, Any], pane: dict[str, Any], now: float,
+                             queued: list[str]) -> None:
+        """Move the no-progress clock past time the task spends blocked on the host's heavy queue.
+
+        A task once waited about 5 h for its turn with three gates and the owner was told it
+        looked like a loop. Time running a job still counts.
+        """
+        last = self._queue_checked.get(task["id"])
+        self._queue_checked[task["id"]] = now
+        prog = pane.get("progress")
+        cwd = str(task.get("cwd") or "").rstrip("/")
+        if last is None or not isinstance(prog, dict) or not cwd:
+            return
+        if not any(c == cwd or c.startswith(cwd + "/") for c in queued):
+            return
+        # Ticks skipped while the controller ran are counted, up to a few, as waited too.
+        waited = min(max(0.0, now - last), 3 * self.cfg.watchdog_interval)
+        prog["moved_at"] = min(now, float(prog.get("moved_at") or now) + waited)
+        prog["queued_seconds"] = float(prog.get("queued_seconds") or 0) + waited
+        self.dirty = True
 
     def progress_view(self, pane: dict[str, Any], now: float) -> dict[str, int]:
         prog = pane.get("progress")
@@ -1929,18 +1999,20 @@ class Bridge:
                 and prog.get("alerted_epoch") != epoch and not asked):
             prog["alerted_epoch"] = epoch
             self.dirty = True
+            queued_h = int(float(prog.get("queued_seconds") or 0) // 3600)
+            besides = f" (not counting {queued_h} h in the heavy-job queue)" if queued_h else ""
             self.alert_owner(
                 f"no_progress:{task['id']}:{epoch}",
                 f"⚠️ {self.cfg.project}: task {task['id']} — its checklist has stayed at "
-                f"{prog.get('done')}/{prog.get('total')} for {int(stalled // 3600)} h while the agent works. "
-                f"This looks like a loop: ask the bot for a status or decide whether to go on.", now, 0.0)
+                f"{prog.get('done')}/{prog.get('total')} for {int(stalled // 3600)} h{besides} while the agent "
+                f"works. This looks like a loop: ask the bot for a status or decide whether to go on.", now, 0.0)
         wakes = int(prog.get("wakes") or 0)
         if stalled < self.cfg.no_progress_seconds * (wakes + 1):
             return False
         prog["wakes"] = wakes + 1
         self.dirty = True
         log(f"watchdog no_progress task={task['id']} done={prog.get('done')}/{prog.get('total')} "
-            f"stalled={int(stalled)}s n={wakes + 1}")
+            f"stalled={int(stalled)}s queued={int(float(prog.get('queued_seconds') or 0))}s n={wakes + 1}")
         self.request_wake(task, pane["last_seen"], "no_progress", now)
         return True
 
@@ -2143,6 +2215,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="wake the controller when the task's checklist has not moved this long (0 = off)")
     parser.add_argument("--no-progress-alert-seconds", type=float, default=12 * 3600.0,
                         help="tell the owner once when the checklist has not moved this long (0 = off)")
+    parser.add_argument("--queue-lock", action="append", default=None,
+                        help="lock file of the host's heavy-job queue; time blocked on it is not a stall "
+                             "(default: queue_locks from --config)")
     parser.add_argument("--no-watchdog", action="store_true", help="disable stall/wait watchdog wakes")
     return apply_pipeline_config(parser.parse_args(argv))
 
@@ -2169,6 +2244,8 @@ def apply_pipeline_config(args: argparse.Namespace) -> argparse.Namespace:
         args.cwd_prefix = list(cfg.get("cwd_prefixes", []))
     if args.sibling_prefix is None:
         args.sibling_prefix = bool(cfg.get("sibling_prefix", False))
+    if getattr(args, "queue_lock", None) is None:
+        args.queue_lock = list(cfg.get("queue_locks", []))
     return args
 
 
