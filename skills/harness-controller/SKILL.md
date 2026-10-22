@@ -266,6 +266,18 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   final check, image build or deploy check falls due before the run would end. Until then that agent
   does its light work. A measurement that has yielded for 2 h queues normally. A deliverable the user is
   waiting for should not sit behind an hour-long benchmark.
+- **Speed up a slow suite with parallel workers, never by narrowing it.** If one suite stretches every
+  task that touches its files, propose a small tooling change that runs it on file-scoped workers
+  (pytest-xdist `-n 4 --dist loadfile`, or your runner's equivalent).
+  - Accept it only on parity: the executed test ids equal a sequential `--collect-only` list and the
+    subtest count matches. Nothing may be skipped, marked xfail or forced back into serial order.
+  - Clear the worker's variables (`PYTEST_XDIST_*`, `PYTEST_ADDOPTS`) for child processes, so a test that
+    starts its own test runner does not inherit the outer worker's identity.
+  - (One 74-minute suite dropped to 21 minutes this way, with the same 763 tests.)
+- **Fix a check runner that every agent works around.** If agents keep handing the runner the same
+  manual override (a `cd` into a subdirectory, an extra flag), the runner is broken. Fix it once as a
+  small task. Every override costs agent time, and a receipt that records the hand-written command
+  instead of the derived one can lose a test by accident.
 - **No disk I/O throttling on a host that also runs production.** No `--device-write-iops`,
   `--device-*-bps` or io.max on a test container when a production database shares that disk: a
   throttled writer holds the filesystem journal, and every production commit waits behind it. To model
