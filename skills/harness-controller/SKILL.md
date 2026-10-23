@@ -291,6 +291,13 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   Remove the stray path as a small tooling task with a test that pins both sides: the stray path no
   longer triggers the tier, and every path the suites do read still does. (Runbook edits once pulled a
   37-minute browser tier into nine tasks in four weeks.)
+- **A paid check refuses to start when its result would be refused.** If the check runner judges a
+  paid run (live requests, a metered smoke) against an input that must exist before the run, such as
+  a declared expectation, it checks that input before it spends anything. It uses the same function
+  the verdict uses. The status command names the missing input as a blocker, and the runbook says what
+  to declare and where to take it from. Never let the input be written after the run to turn the
+  result green. (Four tasks once paid for a smoke whose receipt could never be valid, because the
+  runner asked for the declaration only at verdict time.)
 - **No disk I/O throttling on a host that also runs production.** No `--device-write-iops`,
   `--device-*-bps` or io.max on a test container when a production database shares that disk: a
   throttled writer holds the filesystem journal, and every production commit waits behind it. To model
