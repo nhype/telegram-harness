@@ -141,6 +141,13 @@ owner's to answer.
    undo". Spending that follows from a rule the owner already set is not new spending. Such questions
    asked late in the day typically wait all night, and the owner then picks exactly that option.
 
+   An extra check that would need new money or a risk the owner has not approved never keeps a task
+   open. Record the check as UNVERIFIED and give the reason. Finish acceptance, archive and the merge
+   into main. Then offer the check in the result message as a separate follow-up the owner may allow.
+   Once a task has deployed, production runs a branch that main does not have until that merge.
+   (A deployed task once waited a night for two paid test requests. Recording the check and merging
+   then took 13 minutes.)
+
    A large move in the prices customers pay is owner-only. Before it goes live (approving a candidate a
    price guard held back, or setting a price by hand), the owner sees one product's before → after and
    says yes, unless they already approved those exact numbers. A guard that holds a price change back is
