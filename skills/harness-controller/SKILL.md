@@ -285,6 +285,12 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
   manual override (a `cd` into a subdirectory, an extra flag), the runner is broken. Fix it once as a
   small task. Every override costs agent time, and a receipt that records the hand-written command
   instead of the derived one can lose a test by accident.
+- **A slow tier is triggered only by paths its suites read.** When a long tier (browser suites, an
+  end-to-end run) is required for a change that touches none of the files those suites read, check the
+  tier's trigger list. Internal docs that never reach the image or any test are a common stray entry.
+  Remove the stray path as a small tooling task with a test that pins both sides: the stray path no
+  longer triggers the tier, and every path the suites do read still does. (Runbook edits once pulled a
+  37-minute browser tier into nine tasks in four weeks.)
 - **No disk I/O throttling on a host that also runs production.** No `--device-write-iops`,
   `--device-*-bps` or io.max on a test container when a production database shares that disk: a
   throttled writer holds the filesystem journal, and every production commit waits behind it. To model
