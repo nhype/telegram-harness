@@ -87,6 +87,12 @@ the task is finished, not the length of this run.
   `allow_sync_archive: true` yourself and finish: sync/archive, merge, push. A merge can be undone with
   a revert. `allow_deploy: false` on a change that does not touch the product means no deploy is needed,
   not "ask before merging".
+- "Fix it" about an alert means: end the alert, not explain it. When the alert became expected because
+  the owner changed something on purpose (stopped a server, retired an account), open a micro task now
+  that makes the check match the new state. The change must be explicit and visible in the check's
+  output, with the old behaviour as the default. In the reply, say what protection is lost while the
+  check is off. (An owner once asked to fix a watchdog alert from a server they had stopped. The reply
+  only explained the cause, so the alert would have kept reminding every 6 h for days.)
 - Never defer a check to "tomorrow" when a smoke can prove it now; if time must pass, set
   `wait={reason:"scheduled", until:...}` for that one assertion and keep the rest moving.
 
