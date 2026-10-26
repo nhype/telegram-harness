@@ -221,6 +221,11 @@ the owner was asked.
    extend the wait. Tell the agent which test hangs, to stop that run by its PID, and to give a test that
    holds a lock a client-side timeout so it fails instead of hanging. One such test once kept an agent
    and its controller waiting almost an hour.
+7. **A plan review takes two rounds at most.** On a high-risk change you may send the plan back before
+   Apply twice. After the second round, an open point becomes a test-first checklist item (or a named
+   design risk) that Apply resolves with a failing test first. It does not start a third round of plan
+   text. A finding that would break money, limits or rollback still blocks Apply as such: name the item
+   that must land first.
 
 ## Live evidence: create it, do not wait for it
 
