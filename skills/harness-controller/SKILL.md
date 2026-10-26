@@ -198,8 +198,9 @@ the owner was asked.
    Only latency, throughput and capacity bounds become reference-only. Correctness and money guarantees
    never do: a failure there stays a blocker whatever its cause.
 2. **Three strikes.** A gate may fail on three consecutive candidates, or after three fix attempts,
-   without its verdict improving (the same failing check, the same bucket). An environment-bound check
-   then follows rule 1. For a code-bound check, a fourth attempt needs a new approach that you can name,
+   without its verdict improving (the same failing check, the same bucket). A lab or benchmark check
+   counts the same as a gate: retries that are load runs rather than gate tiers still add up to strikes.
+   An environment-bound check then follows rule 1. For a code-bound check, a fourth attempt needs a new approach that you can name,
    or else ask the owner («Owner questions»).
 3. **Plan thresholds are not owner decisions.** The owner can change numbers that the agent froze in its
    own plan (SLOs, budgets, windows). Tell the owner that relaxing one contradicts their decision only
