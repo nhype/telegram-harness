@@ -440,6 +440,10 @@ A successful `herdr_task update` returns the changed fields — do not re-read t
   and the evidence directory. A case the script refuses, such as a schema migration, follows the
   runbook's manual procedure. (Hand-written per-task procedures once repeated an old bug: a second replica
   recreated before the edge proxy stopped marking the first one down gave public 502s.)
+- The script's read-only plan check runs BEFORE the final gates, when it reads only live state and not the
+  candidate artifact, so a refusal that needs a fix in the deploy scripts lands before the long suites.
+  Run it once more on the gated commit and the built artifact. (A task once hit two plan refusals after
+  green gates and re-ran every final gate twice, about three hours.)
 - A deploy step that tells the agent to "announce the switch to the other sessions and wait for the
   answer" is answered by you in the same run, never by the owner and never by a wait. Check
   `herdr_task list` and `herdr agent list` for another task that is deploying or measuring. If there is
