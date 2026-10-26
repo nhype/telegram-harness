@@ -221,6 +221,11 @@ the owner was asked.
    extend the wait. Tell the agent which test hangs, to stop that run by its PID, and to give a test that
    holds a lock a client-side timeout so it fails instead of hanging. One such test once kept an agent
    and its controller waiting almost an hour.
+   The other shape: the test process sits at full CPU and its log has not grown for 10 min. That is a
+   search that does not end (a model checker, a property test, a fuzz loop), not a lock. Do not extend
+   the wait either. The agent stops it by PID and bounds it: fewer actors or steps, a printed count of
+   explored states, a case that ends in about a minute in the default suite, and any larger exhaustive
+   case as an opt-in test with its own optimized command. Every later gate runs the default suite.
 7. **A plan review takes two rounds at most.** On a high-risk change you may send the plan back before
    Apply twice. After the second round, an open point becomes a test-first checklist item (or a named
    design risk) that Apply resolves with a failing test first. It does not start a third round of plan
