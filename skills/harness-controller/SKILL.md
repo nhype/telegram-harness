@@ -275,7 +275,8 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - A final check that goes red on a test the change cannot reach (neither the test's module nor anything
   it calls is in the diff) is not investigated inside the delivery task. The agent records the red, runs
   that test alone a few times, and stops. If it passes alone, that check is re-run once on the unchanged
-  tree: the one exception to the rule above, and a strike for that check. A second red on the same test
+  tree (no commit of the red's notes before it, see below): the one exception to the rule above, and a
+  strike for that check. A second red on the same test
   stops the check and comes to the controller; there is no third run. The test goes, with its evidence,
   to a separate small task. The delivery task neither fixes it (a commit makes every final check stale)
   nor runs root-cause experiments on it, unless the fix costs less than the re-runs it triggers. Timing
@@ -284,7 +285,10 @@ of main, a formatting-only edit, a "run it once more") can double a task's lengt
 - While a long check runs, the agent neither commits nor edits files in that worktree. A run whose tree
   changed under it proves nothing about the final tree, and a runner that keys its result on the commit
   throws it away. Notes wait until the run ends. A docs commit made one minute into an hour-long browser
-  run costs the whole hour.
+  run costs the whole hour. The same holds between final checks when the runner pins their results to
+  the commit: a docs-only commit after a red voids every final check that was already green. The red's
+  notes stay outside the worktree and are committed with the next code fix, or after the last final
+  check when the red check is only re-run.
 - **One heavy job on the host at a time** (full suites, image builds, load tests, and a "targeted" UI or
   browser run that spans many files or several workers). If the repo has a
   host-wide lock for heavy jobs (a `flock` wrapper script), the lock decides. Send the agent to its heavy
