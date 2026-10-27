@@ -432,6 +432,10 @@ When a finished change ships behind a feature flag that is still off in producti
 deployment's config, not the design), the result message says so plainly: users do not see the feature
 yet, turning it on is the owner's decision, and what it takes (a config change and a rolling restart,
 done as a task). "Accepted" alone reads as "already in users' hands".
+When an agent's own rules tell it to warn "the user" about a high-risk edit, the warning is for you, as
+the agent's user. Read the diff, then allow, narrow or refuse. The owner hears of it only when your
+decision changes scope, touches production or needs the owner's choice; otherwise it waits for the next
+status the owner asks for. A high-risk change can raise several such warnings an hour.
 
 ## Graceful exit of a finished task
 
