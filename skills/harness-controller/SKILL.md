@@ -253,6 +253,11 @@ Full suites set the pace of a task. When several tasks share one host, a suite t
 can take 70–100 min next to another suite or an image build. Repeats on unchanged code (after a late merge
 of main, a formatting-only edit, a "run it once more") can double a task's length.
 
+- The gate picks the tiers from the changed paths. Do not order a tier it reports as not applicable: a
+  red there blocks a change it does not test.
+- A shared test service (a dev database that one suite recreates at start) is a shared resource like the
+  heavy slot. A targeted test that needs it while another task's suite holds the slot uses its own
+  throwaway instance (its own port and connection URL, removed afterwards), not the shared one.
 - While the agent iterates, only targeted tests run: the tests of the code and pages it touched. Do not
   prompt for a full suite mid-work.
 - The prompt that sends the agent to its final checks gives this order: merge fresh `origin/main` (and
